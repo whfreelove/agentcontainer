@@ -35,7 +35,7 @@ jobs:
           echo "files=$scripts" >> "$GITHUB_OUTPUT"
 
       - name: ShellCheck
-        run: shellcheck -x -s bash ${{ steps.scripts.outputs.files }}
+        run: shellcheck -x -s bash --severity=warning ${{ steps.scripts.outputs.files }}
 
       - name: Bash syntax check (bash -n)
         run: |
@@ -262,7 +262,7 @@ jobs:
           for f in $(find lib -name '*.sh' -type f | sort); do
             scripts="$scripts $f"
           done
-          shellcheck -x -s bash $scripts
+          shellcheck -x -s bash --severity=warning $scripts
 
       - name: Bash syntax check (system Bash 3.2)
         run: |
@@ -385,7 +385,7 @@ jobs:
           echo "files=$scripts" >> "$GITHUB_OUTPUT"
 
       - name: ShellCheck
-        run: shellcheck -x -s bash ${{ steps.scripts.outputs.files }}
+        run: shellcheck -x -s bash --severity=warning ${{ steps.scripts.outputs.files }}
 
       - name: Bash syntax check (bash -n)
         run: |

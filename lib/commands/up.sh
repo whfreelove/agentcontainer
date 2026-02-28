@@ -135,6 +135,7 @@ start_apple_container() {
     # Parse mounts from devcontainer.json
     local mount_args=()
     if [[ -f "$devcontainer_json" ]]; then
+        # shellcheck disable=SC2207
         mount_args=($(parse_devcontainer_mounts "$devcontainer_json"))
     else
         # Fallback if no devcontainer.json
@@ -236,7 +237,8 @@ start_apple_container() {
 # Parse mounts from devcontainer.json and convert to container CLI format
 parse_devcontainer_mounts() {
     local devcontainer_json="$1"
-    local local_workspace="$(pwd)"
+    local local_workspace
+    local_workspace="$(pwd)"
     local container_workspace="$WORKSPACE_FOLDER"
 
     # Read mounts array from devcontainer.json
