@@ -146,15 +146,15 @@ start_apple_container() {
     local resource_args=()
     if [[ -f "$devcontainer_json" ]]; then
         local memory cpus
-        memory=$(jq -r '.runArgs[]? | select(startswith("--memory"))' "$devcontainer_json" 2>/dev/null | head -1)
-        cpus=$(jq -r '.runArgs[]? | select(startswith("--cpus"))' "$devcontainer_json" 2>/dev/null | head -1)
+        memory=$(jq -r '.runArgs[]? | select(startswith("--memory="))' "$devcontainer_json" 2>/dev/null | head -1)
+        cpus=$(jq -r '.runArgs[]? | select(startswith("--cpus="))' "$devcontainer_json" 2>/dev/null | head -1)
 
         # Apple Container 0.10+ enforces a minimum memory of 200 MiB
         if [[ -n "$memory" ]]; then
             local mem_value="${memory#--memory=}"
             if ! validate_apple_container_memory "$mem_value"; then
                 log_error "Memory limit '$mem_value' is below Apple Container's minimum of 200m (200 MiB)."
-                log_error "Increase MEMORY_LIMIT in .agentcontainer/agentcontainer.conf (e.g. MEMORY_LIMIT=512m)"
+                log_error "Increase MEMORY_LIMIT in .agentcontainer/local.conf (e.g. MEMORY_LIMIT=512m)"
                 return 1
             fi
             resource_args+=("$memory")
@@ -278,6 +278,7 @@ parse_devcontainer_mounts() {
 
 # Validate memory value meets Apple Container 0.10+ minimum (200 MiB)
 # Accepts values like "200m", "1g", "4G", "512M", "1024" (bytes)
+# Note: fractional values (e.g. "0.5g") pass through unvalidated to Apple Container
 validate_apple_container_memory() {
     local mem_str="$1"
     local value suffix mib

@@ -66,17 +66,44 @@ cmd_build() {
         return 1
     fi
 
-    # For apple-container, we need a docker-compatible runtime to build
-    # then transfer the image to apple-container
+    # For apple-container, prefer native build via shim (no image transfer needed).
+    # Falls back to Docker/Lima build + transfer if builder unavailable or AC_BUILD_USE_SHIM=0.
     build_runtime="$detected_runtime"
     if [[ "$detected_runtime" == "apple-container" ]]; then
-        build_runtime="$(find_build_runtime "$detected_platform")"
-        if [[ -z "$build_runtime" ]]; then
-            log_error "Apple Container detected but no docker-compatible build runtime found."
-            log_error "Please install Docker Desktop or Lima for building images."
-            return 1
+        local use_native=false
+
+        if [[ "${AC_BUILD_USE_SHIM:-1}" == "1" ]]; then
+            # Check builder daemon availability
+            if container builder status &>/dev/null; then
+                use_native=true
+            else
+                log_info "Starting Apple Container builder..."
+                if container builder start &>/dev/null; then
+                    use_native=true
+                else
+                    log_warn "Could not start Apple Container builder, falling back to Docker/Lima"
+                fi
+            fi
         fi
-        log_info "Using $build_runtime to build (will transfer to Apple Container)"
+
+        if [[ "$use_native" == "true" ]]; then
+            # Native build via shim — no separate build runtime or image transfer needed
+            local shim_path="$LIB_DIR/platform/apple-container-shim.sh"
+            if [[ ! -x "$shim_path" ]]; then
+                chmod +x "$shim_path"
+            fi
+            log_info "Building natively with Apple Container"
+            build_runtime="apple-container-native"
+        else
+            # Fallback: use Docker/Lima to build, then transfer image
+            build_runtime="$(find_build_runtime "$detected_platform")"
+            if [[ -z "$build_runtime" ]]; then
+                log_error "Apple Container detected but no docker-compatible build runtime found."
+                log_error "Please install Docker Desktop or Lima for building images."
+                return 1
+            fi
+            log_info "Using $build_runtime to build (will transfer to Apple Container)"
+        fi
     fi
 
     log_info "Building container..."
@@ -90,6 +117,9 @@ cmd_build() {
 
     # Set docker path based on build runtime
     case "$build_runtime" in
+        apple-container-native)
+            build_args+=(--docker-path "$LIB_DIR/platform/apple-container-shim.sh")
+            ;;
         docker)
             build_args+=(--docker-path docker)
             ;;
@@ -124,7 +154,8 @@ cmd_build() {
         log_ok "Build complete!"
 
         # Handle Apple Container image transfer if needed
-        if [[ "$detected_runtime" == "apple-container" ]]; then
+        # Skip transfer when built natively — image is already in Apple Container's store
+        if [[ "$detected_runtime" == "apple-container" && "$build_runtime" != "apple-container-native" ]]; then
             # Extract image name from JSON output
             local image_name
             image_name=$(echo "$build_result" | grep -o '"imageName":\["[^"]*"' | sed 's/.*\["\([^"]*\)".*/\1/' | head -1)
