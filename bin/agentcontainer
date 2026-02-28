@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+#
+# agentcontainer - Agent-focused container orchestration
+#
+# A thin wrapper around devcontainer CLI with agent-specific features
+# for development environments optimized for AI coding assistants.
+#
+
+set -euo pipefail
+
+VERSION="0.1.0"
+
+# Resolve script directory (follows symlinks to find real location)
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+    DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/../lib"
+
+# Colors for output (disabled if not a terminal)
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m' # No Color
+else
+    RED='' GREEN='' YELLOW='' BLUE='' NC=''
+fi
+
+# Logging helpers
+log_info()  { echo -e "${BLUE}[info]${NC} $*"; }
+log_ok()    { echo -e "${GREEN}[ok]${NC} $*"; }
+log_warn()  { echo -e "${YELLOW}[warn]${NC} $*" >&2; }
+log_error() { echo -e "${RED}[error]${NC} $*" >&2; }
+
+# Source utilities
+source "$LIB_DIR/utils/config.sh"
+source "$LIB_DIR/utils/template.sh"
+source "$LIB_DIR/platform/detect.sh"
+
+# Show help
+show_help() {
+    cat <<EOF
+agentcontainer v$VERSION - Agent-focused container orchestration
+
+Usage: agentcontainer [command] [options]
+
+When run without a command, executes the agent defined by EXEC_AGENT in config.
+
+Commands:
+    (none)      Run the agent (EXEC_AGENT from agentcontainer.conf)
+    init        Generate .agentcontainer/ and .devcontainer/ from templates
+    build       Build container image (platform-aware)
+    up          Start the container
+    shell       Exec into running container
+    stop        Stop the running container
+    down        Stop and remove the container
+    status      Show container and runtime status
+    help        Show this help message
+
+Options:
+    -h, --help      Show help for a command
+    -v, --version   Show version
+    --debug         Enable debug output
+
+Examples:
+    agentcontainer                                   # Run the agent
+    agentcontainer -- --resume                       # Run agent with args
+    agentcontainer -- -p "fix the bug"               # Run agent with prompt
+    agentcontainer init --agent claude-code          # Initialize with Claude Code
+    agentcontainer build && agentcontainer up        # Build and start
+    agentcontainer shell                             # Debug shell in container
+
+Configuration (.agentcontainer/agentcontainer.conf):
+    EXEC_AGENT="claude"                              # Args append at end
+    EXEC_AGENT="nix-shell --run 'claude {}'"         # {} = where args go
+
+For more information, see: https://github.com/whfreelove/agentcontainer
+EOF
+}
+
+# Show version
+show_version() {
+    echo "agentcontainer v$VERSION"
+}
+
+# Check for required dependencies
+check_dependencies() {
+    local missing=()
+
+    if ! command -v devcontainer &>/dev/null; then
+        missing+=("devcontainer (npm install -g @devcontainers/cli)")
+    fi
+
+    if ! command -v envsubst &>/dev/null; then
+        missing+=("envsubst (part of gettext)")
+    fi
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies:"
+        for dep in "${missing[@]}"; do
+            echo "  - $dep"
+        done
+        return 1
+    fi
+
+    return 0
+}
+
+# Run the agent (EXEC_AGENT from config)
+# Arguments after -- are passed to the agent
+cmd_run_agent() {
+    local agent_args=("$@")
+    # Verify initialization
+    if [[ ! -f ".agentcontainer/agentcontainer.conf" ]]; then
+        log_error "Project not initialized. Run 'agentcontainer init' first."
+        return 1
+    fi
+
+    load_config
+
+    if [[ -z "$EXEC_AGENT" ]]; then
+        log_error "EXEC_AGENT not configured in .agentcontainer/agentcontainer.conf"
+        echo
+        echo "Set EXEC_AGENT to the command that runs your agent, e.g.:"
+        echo "  EXEC_AGENT=\"claude\""
+        echo "  EXEC_AGENT=\"nix-shell --run claude\""
+        return 1
+    fi
+
+    # Detect runtime and find container
+    local detected_runtime container_cmd
+    detected_runtime="$(detect_runtime)"
+    container_cmd="$(get_container_cmd "$detected_runtime")"
+
+    if [[ -z "$container_cmd" ]]; then
+        log_error "No container runtime found."
+        return 1
+    fi
+
+    # Find the running container
+    source "$LIB_DIR/commands/shell.sh"
+    local container_id
+    container_id="$(find_project_container "$PROJECT_NAME" "$container_cmd")"
+
+    if [[ -z "$container_id" ]]; then
+        log_error "No running container found for project: $PROJECT_NAME"
+        echo "Run 'agentcontainer up' first."
+        return 1
+    fi
+
+    # Get remoteUser from devcontainer.json
+    local user=""
+    if [[ -f ".devcontainer/devcontainer.json" ]]; then
+        user=$(jq -r '.remoteUser // empty' .devcontainer/devcontainer.json 2>/dev/null)
+    fi
+
+    # Build exec arguments
+    local exec_args=()
+    [[ -t 0 ]] && exec_args+=(-i)
+    [[ -t 1 ]] && exec_args+=(-t)
+    [[ -n "$user" ]] && exec_args+=(--user "$user")
+    exec_args+=(-w "$WORKSPACE_FOLDER")
+
+    # Build full command with any extra args
+    local full_cmd="$EXEC_AGENT"
+    local args_str=""
+    if [[ ${#agent_args[@]} -gt 0 ]]; then
+        # Quote args for shell safety
+        for arg in "${agent_args[@]}"; do
+            args_str+=" $(printf '%q' "$arg")"
+        done
+        args_str="${args_str# }"  # trim leading space
+    fi
+
+    # Insert args at {} placeholder, or append at end
+    if [[ "$full_cmd" == *'{}'* ]]; then
+        full_cmd="${full_cmd//\{\}/$args_str}"
+    elif [[ -n "$args_str" ]]; then
+        full_cmd+=" $args_str"
+    fi
+
+    log_info "Running: $full_cmd"
+
+    # Execute the agent command
+    case "$container_cmd" in
+        docker|podman|nerdctl)
+            exec $container_cmd exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            ;;
+        "lima nerdctl")
+            exec lima nerdctl exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            ;;
+        container)
+            exec container exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            ;;
+        *)
+            log_error "Don't know how to exec with: $container_cmd"
+            return 1
+            ;;
+    esac
+}
+
+# Main entry point
+main() {
+    local command="${1:-}"
+
+    # Handle global options
+    case "$command" in
+        -h|--help|help)
+            show_help
+            exit 0
+            ;;
+        -v|--version)
+            show_version
+            exit 0
+            ;;
+        --debug)
+            set -x
+            shift
+            command="${1:-}"
+            ;;
+    esac
+
+    # No command or "--" - run the agent if configured
+    if [[ -z "$command" || "$command" == "--" ]]; then
+        if [[ -f ".agentcontainer/agentcontainer.conf" ]]; then
+            check_dependencies || exit 1
+            # Pass args after "--" to the agent
+            if [[ "$command" == "--" ]]; then
+                shift
+                cmd_run_agent "$@"
+            else
+                cmd_run_agent
+            fi
+            exit $?
+        else
+            show_help
+            exit 0
+        fi
+    fi
+
+    # Check dependencies before running commands
+    check_dependencies || exit 1
+
+    # Dispatch to command handler
+    case "$command" in
+        init)
+            source "$LIB_DIR/commands/init.sh"
+            cmd_init "${@:2}"
+            ;;
+        build)
+            source "$LIB_DIR/commands/build.sh"
+            cmd_build "${@:2}"
+            ;;
+        up)
+            source "$LIB_DIR/commands/up.sh"
+            cmd_up "${@:2}"
+            ;;
+        shell)
+            source "$LIB_DIR/commands/shell.sh"
+            cmd_shell "${@:2}"
+            ;;
+        stop)
+            source "$LIB_DIR/commands/stop.sh"
+            cmd_stop "${@:2}"
+            ;;
+        down)
+            source "$LIB_DIR/commands/down.sh"
+            cmd_down "${@:2}"
+            ;;
+        status)
+            log_info "Checking status..."
+            print_runtime_info
+            if [[ -f "$AGENTCONTAINER_CONFIG" ]]; then
+                load_config
+                print_config
+            else
+                log_warn "No agentcontainer.conf found. Run 'agentcontainer init' first."
+            fi
+            ;;
+        *)
+            log_error "Unknown command: $command"
+            echo
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

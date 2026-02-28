@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+#
+# Container setup script
+# Runs once after container creation (postCreateCommand)
+#
+
+set -euo pipefail
+
+echo "=== Setting up ${PROJECT_NAME} ==="
+
+# Fix ownership of Claude auth volume for non-root users
+if [[ "$(id -u)" != "0" && -d "$HOME/.claude" ]]; then
+    sudo chown -R "$(id -u):$(id -g)" "$HOME/.claude" 2>/dev/null || true
+fi
+
+# Persist ~/.claude.json* files in the volume via symlinks
+# This ensures auth survives container down/up cycles
+persist_claude_file() {
+    local filename="$1"
+    local src="$HOME/$filename"
+    local dest="$HOME/.claude/$filename"
+
+    if [[ -f "$src" && ! -L "$src" ]]; then
+        # Move existing file into volume, create symlink
+        mv "$src" "$dest"
+        ln -s "$dest" "$src"
+    elif [[ ! -e "$src" && -f "$dest" ]]; then
+        # Volume has file, create symlink
+        ln -s "$dest" "$src"
+    fi
+}
+
+# Main auth file
+persist_claude_file ".claude.json"
+
+# Backup files (.claude.json.backup.$EPOCH)
+for f in "$HOME"/.claude.json.backup.*; do
+    [[ -e "$f" ]] && persist_claude_file "$(basename "$f")"
+done
+for f in "$HOME/.claude"/.claude.json.backup.*; do
+    [[ -e "$f" ]] && persist_claude_file "$(basename "$f")"
+done
+
+# Run project setup script if configured
+_setup="${SETUP_SCRIPT}"
+if [[ -n "$_setup" ]]; then
+    if [[ -x "$_setup" ]]; then
+        echo "Running $_setup..."
+        "$_setup"
+    elif [[ -f "$_setup" ]]; then
+        echo "Running $_setup..."
+        bash "$_setup"
+    else
+        echo "Warning: Setup script not found: $_setup" >&2
+    fi
+fi
+
+# === Add custom commands below ===
+
+echo "=== Setup complete ==="

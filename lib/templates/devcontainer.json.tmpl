@@ -1,0 +1,42 @@
+{
+    "name": "${PROJECT_NAME}",
+    "image": "${BASE_IMAGE}",
+
+    "features": {
+${FEATURES_JSON}
+    },
+
+    "mounts": [
+${MOUNTS_JSON}
+    ],
+
+    "containerEnv": {
+        "PROJECT_NAME": "${PROJECT_NAME}",
+        "WORKSPACE_FOLDER": "${WORKSPACE_FOLDER}"
+    },
+
+    "remoteUser": "vscode",
+    "updateRemoteUserUID": true,
+    "workspaceFolder": "${WORKSPACE_FOLDER}",
+
+    "postCreateCommand": "bash .agentcontainer/setup.sh",
+
+    "runArgs": [
+        "--memory=${MEMORY_LIMIT}",
+        "--cpus=${CPU_LIMIT}",
+        "--pids-limit=${PID_LIMIT}"
+    ],
+
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "${DEFAULT_SHELL}"${SHELL_PROFILES_JSON}
+            }
+        }
+    },
+
+    "hostRequirements": {
+        "memory": "${MEMORY_LIMIT}",
+        "cpus": ${CPU_LIMIT}
+    }
+}
