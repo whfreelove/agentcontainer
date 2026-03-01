@@ -133,7 +133,7 @@ jobs:
           # Always use manual start — the systemd unit defaults to OCI worker
           # which has a separate image store, breaking devcontainer's two-phase build
           sudo systemctl stop buildkit 2>/dev/null || true
-          sudo buildkitd --containerd-worker=true --oci-worker=false > /tmp/buildkitd.log 2>&1 &
+          sudo buildkitd --containerd-worker=true --oci-worker=false --containerd-worker-namespace=default > /tmp/buildkitd.log 2>&1 &
           disown
 
           # Wait for buildkitd socket
