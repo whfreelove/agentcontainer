@@ -129,14 +129,12 @@ jobs:
             exit 1
           fi
 
-          # Start buildkitd (required for nerdctl build)
-          if systemctl list-unit-files buildkit.service | grep -q buildkit.service; then
-            sudo systemctl enable --now buildkit
-          else
-            echo "Starting buildkitd manually..."
-            sudo buildkitd --containerd-worker=true --oci-worker=false > /tmp/buildkitd.log 2>&1 &
-            disown
-          fi
+          # Start buildkitd with containerd worker (shares image store with nerdctl)
+          # Always use manual start — the systemd unit defaults to OCI worker
+          # which has a separate image store, breaking devcontainer's two-phase build
+          sudo systemctl stop buildkit 2>/dev/null || true
+          sudo buildkitd --containerd-worker=true --oci-worker=false > /tmp/buildkitd.log 2>&1 &
+          disown
 
           # Wait for buildkitd socket
           echo "Waiting for buildkitd..."
@@ -202,6 +200,15 @@ jobs:
             agentcontainer up
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" up
+          fi
+
+      - name: "Debug: list containers"
+        run: |
+          echo "=== Running containers ==="
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
+            ${{ matrix.runtime }} ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}' || true
+          else
+            sudo ${{ matrix.runtime }} ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}' || true
           fi
 
       - name: "Test: shell"

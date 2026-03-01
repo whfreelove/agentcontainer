@@ -88,7 +88,7 @@ cmd_shell() {
 
     # Find the running container
     local container_id
-    container_id="$(find_project_container "$PROJECT_NAME" "$container_cmd")"
+    container_id="$(find_project_container "$PROJECT_NAME" "$container_cmd")" || true
 
     if [[ -z "$container_id" ]]; then
         log_error "No running container found for project: $PROJECT_NAME"
