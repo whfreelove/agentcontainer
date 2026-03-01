@@ -202,15 +202,6 @@ jobs:
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" up
           fi
 
-      - name: "Debug: list containers"
-        run: |
-          echo "=== Running containers ==="
-          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
-            ${{ matrix.runtime }} ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}' || true
-          else
-            sudo ${{ matrix.runtime }} ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}' || true
-          fi
-
       - name: "Test: shell"
         run: |
           cd /tmp/ci-test-project
