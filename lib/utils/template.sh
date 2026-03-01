@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016  # ${localWorkspaceFolder} is a devcontainer variable, not a shell expansion
 # Template expansion utilities
 
 # Expand template using envsubst

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1090  # dynamic config paths resolved at runtime
 # Configuration loading and defaults
 
 # Config file locations

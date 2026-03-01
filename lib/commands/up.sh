@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1091  # dynamic source path resolved at runtime
 # agentcontainer up command
 
 cmd_up() {

@@ -35,7 +35,7 @@ jobs:
           echo "files=$scripts" >> "$GITHUB_OUTPUT"
 
       - name: ShellCheck
-        run: shellcheck -x -s bash --severity=warning ${{ steps.scripts.outputs.files }}
+        run: shellcheck -x -s bash ${{ steps.scripts.outputs.files }}
 
       - name: Bash syntax check (bash -n)
         run: |
@@ -141,13 +141,13 @@ jobs:
           # Wait for buildkitd socket
           echo "Waiting for buildkitd..."
           for i in $(seq 1 30); do
-            if [ -S /run/buildkit/buildkitd.sock ]; then
+            if sudo test -S /run/buildkit/buildkitd.sock; then
               echo "buildkitd ready"
               break
             fi
             sleep 1
           done
-          if [ ! -S /run/buildkit/buildkitd.sock ]; then
+          if ! sudo test -S /run/buildkit/buildkitd.sock; then
             echo "ERROR: buildkitd socket not found after 30s"
             exit 1
           fi
@@ -160,10 +160,16 @@ jobs:
         if: matrix.runtime == 'podman'
         run: |
           sudo apt-get update && sudo apt-get install -y podman
-          # Enable rootful Podman socket for devcontainer CLI compatibility
-          sudo systemctl enable --now podman.socket
+          # Ensure subuid/subgid for rootless
+          grep -q "^runner:" /etc/subuid || sudo usermod --add-subuids 100000-165535 runner
+          grep -q "^runner:" /etc/subgid || sudo usermod --add-subgids 100000-165535 runner
+          # Use cgroupfs + file logger to avoid systemd user session requirements
+          # Resource limits are silently ignored in rootless mode (acceptable for CI)
+          mkdir -p "$HOME/.config/containers"
+          printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > "$HOME/.config/containers/containers.conf"
+          # devcontainer CLI invokes podman as a CLI subprocess (build/run/exec),
+          # not via Docker-compatible API socket — no podman.socket needed
           podman version
-          sudo podman version
 
       # ── Integration test lifecycle ─────────────────────
       # Each phase is a separate step because shell.sh uses exec,
@@ -174,7 +180,7 @@ jobs:
         run: |
           # Create a temporary project directory for the test
           mkdir -p /tmp/ci-test-project && cd /tmp/ci-test-project
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer init --agent claude-code --exec claude --force
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" init --agent claude-code --exec claude --force
@@ -183,7 +189,7 @@ jobs:
       - name: "Test: build"
         run: |
           cd /tmp/ci-test-project
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer build
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" build
@@ -192,7 +198,7 @@ jobs:
       - name: "Test: up"
         run: |
           cd /tmp/ci-test-project
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer up
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" up
@@ -201,7 +207,7 @@ jobs:
       - name: "Test: shell"
         run: |
           cd /tmp/ci-test-project
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer shell echo "agentcontainer-ci-test"
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" shell echo "agentcontainer-ci-test"
@@ -211,7 +217,7 @@ jobs:
         if: always()
         run: |
           cd /tmp/ci-test-project 2>/dev/null || exit 0
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer stop || true
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" stop || true
@@ -221,7 +227,7 @@ jobs:
         if: always()
         run: |
           cd /tmp/ci-test-project 2>/dev/null || exit 0
-          if [ "${{ matrix.runtime }}" = "docker" ]; then
+          if [ "${{ matrix.runtime }}" = "docker" ] || [ "${{ matrix.runtime }}" = "podman" ]; then
             agentcontainer down || true
           else
             sudo -E env "PATH=$PATH" "$(which agentcontainer)" down || true
@@ -262,7 +268,7 @@ jobs:
           for f in $(find lib -name '*.sh' -type f | sort); do
             scripts="$scripts $f"
           done
-          shellcheck -x -s bash --severity=warning $scripts
+          shellcheck -x -s bash $scripts
 
       - name: Bash syntax check (system Bash 3.2)
         run: |
@@ -372,8 +378,12 @@ jobs:
           URL="https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.zip"
           curl -fsSL "$URL" -o /tmp/shellcheck.zip
           unzip -o /tmp/shellcheck.zip -d /tmp/shellcheck
-          # Zip extracts into versioned subdirectory containing shellcheck.exe
-          echo "/tmp/shellcheck/shellcheck-v${SHELLCHECK_VERSION}" >> "$GITHUB_PATH"
+          # Handle both flat and versioned subdirectory extraction layouts
+          if [ -f "/tmp/shellcheck/shellcheck.exe" ]; then
+            echo "/tmp/shellcheck" >> "$GITHUB_PATH"
+          else
+            echo "/tmp/shellcheck/shellcheck-v${SHELLCHECK_VERSION}" >> "$GITHUB_PATH"
+          fi
 
       - name: Collect scripts
         id: scripts
@@ -385,7 +395,7 @@ jobs:
           echo "files=$scripts" >> "$GITHUB_OUTPUT"
 
       - name: ShellCheck
-        run: shellcheck -x -s bash --severity=warning ${{ steps.scripts.outputs.files }}
+        run: shellcheck -x -s bash ${{ steps.scripts.outputs.files }}
 
       - name: Bash syntax check (bash -n)
         run: |
