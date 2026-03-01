@@ -242,22 +242,31 @@ jobs:
           sudo journalctl -u containerd --no-pager -n 50 2>/dev/null || true
 
   # ─────────────────────────────────────────────────────────
-  # Job 3: macOS — Apple Container with fallback
+  # Job 3: macOS — Lima + Apple Container matrix
   # ─────────────────────────────────────────────────────────
   test-macos:
-    name: macOS · Apple Container
+    name: "macOS · ${{ matrix.runtime }}"
     needs: lint
     runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: lima
+          - runtime: apple-container
+    env:
+      MACOS_RUNTIME: ${{ matrix.runtime }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Add agentcontainer to PATH
         run: echo "${{ github.workspace }}/bin" >> "$GITHUB_PATH"
 
+      # ── macOS-specific lint (both runtimes) ───────────
       - name: Install ShellCheck
         run: brew install shellcheck
 
-      - name: Install Bash 5 (for syntax testing alongside system Bash 3.2)
+      - name: Install Bash 5
         run: brew install bash
 
       - name: ShellCheck
@@ -287,7 +296,6 @@ jobs:
 
       - name: Unit test — detect_platform()
         run: |
-          # Source the detection library and verify macOS detection
           source lib/platform/detect.sh
           platform="$(detect_platform)"
           echo "Detected platform: $platform"
@@ -297,15 +305,24 @@ jobs:
           fi
           echo "PASS: platform detection correct"
 
-      - name: Install Apple Container CLI
-        run: brew install container
+      # ── Runtime setup ─────────────────────────────────
+      - name: Setup Lima
+        if: matrix.runtime == 'lima'
+        timeout-minutes: 10
+        run: |
+          brew install lima
+          limactl start --name=default --tty=false
+          lima nerdctl version
+          # Verify nerdctl.lima wrapper is available (used by build.sh and up.sh)
+          command -v nerdctl.lima
 
-      - name: Attempt to start Apple Container builder
+      - name: Setup Apple Container
+        if: matrix.runtime == 'apple-container'
         id: builder
         continue-on-error: true
         timeout-minutes: 2
         run: |
-          # Apple Container may be blocked by nested virtualization on GHA runners
+          brew install container
           if container builder start 2>&1; then
             echo "available=true" >> "$GITHUB_OUTPUT"
             echo "Apple Container builder started successfully"
@@ -314,43 +331,53 @@ jobs:
             echo "Apple Container builder could not start (likely nested virt restriction)"
           fi
 
+      # ── Integration tests ─────────────────────────────
+      # Lima: always run
+      # Apple Container: only if builder available
       - name: Install devcontainer CLI and dependencies
-        if: steps.builder.outputs.available == 'true'
+        if: matrix.runtime == 'lima' || steps.builder.outputs.available == 'true'
         run: |
           npm install -g @devcontainers/cli
-          brew install gettext
-          # gettext is keg-only; add its bin to PATH instead of force-linking
+          brew install jq gettext
           echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
 
       - name: "Test: init"
-        if: steps.builder.outputs.available == 'true'
+        if: matrix.runtime == 'lima' || steps.builder.outputs.available == 'true'
         run: |
           mkdir -p /tmp/ci-test-project && cd /tmp/ci-test-project
           agentcontainer init --agent claude-code --exec claude --force
 
       - name: "Test: build"
-        if: steps.builder.outputs.available == 'true'
+        if: matrix.runtime == 'lima' || steps.builder.outputs.available == 'true'
         run: cd /tmp/ci-test-project && agentcontainer build
 
       - name: "Test: up"
-        if: steps.builder.outputs.available == 'true'
+        if: matrix.runtime == 'lima' || steps.builder.outputs.available == 'true'
         run: cd /tmp/ci-test-project && agentcontainer up
 
       - name: "Test: shell"
-        if: steps.builder.outputs.available == 'true'
+        if: matrix.runtime == 'lima' || steps.builder.outputs.available == 'true'
         run: cd /tmp/ci-test-project && agentcontainer shell echo "agentcontainer-ci-test"
 
       - name: "Test: stop"
-        if: always() && steps.builder.outputs.available == 'true'
+        if: always() && (matrix.runtime == 'lima' || steps.builder.outputs.available == 'true')
         run: |
           cd /tmp/ci-test-project 2>/dev/null || exit 0
           agentcontainer stop || true
 
       - name: "Test: down"
-        if: always() && steps.builder.outputs.available == 'true'
+        if: always() && (matrix.runtime == 'lima' || steps.builder.outputs.available == 'true')
         run: |
           cd /tmp/ci-test-project 2>/dev/null || exit 0
           agentcontainer down || true
+
+      - name: Apple Container integration skipped
+        if: matrix.runtime == 'apple-container' && steps.builder.outputs.available != 'true'
+        run: echo "::notice::Apple Container integration tests skipped (builder unavailable)"
+
+      - name: Stop Lima VM
+        if: always() && matrix.runtime == 'lima'
+        run: limactl stop default || true
 
   # ─────────────────────────────────────────────────────────
   # Job 4: Windows — lint only
