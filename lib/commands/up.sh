@@ -205,6 +205,7 @@ start_apple_container() {
         log_info "Initializing features..."
         local exec_user_args=()
         [[ -n "$remote_user" ]] && exec_user_args+=(-u "$remote_user")
+        # shellcheck disable=SC2016  # single quotes intentional — $entrypoint expands inside the container
         container exec ${exec_user_args[@]+"${exec_user_args[@]}"} "$container_name" sh -c '
             for entrypoint in /usr/local/share/*-entrypoint.sh; do
                 if [ -x "$entrypoint" ]; then
