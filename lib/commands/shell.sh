@@ -173,13 +173,13 @@ find_project_container() {
         local container_id
         case "$cmd" in
             docker|podman|nerdctl)
-                container_id=$($cmd ps --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$($cmd ps --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
             "lima nerdctl")
-                container_id=$(lima nerdctl ps --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$(lima nerdctl ps --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
             container)
-                container_id=$(container list 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$(container list 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
         esac
 

@@ -1,0 +1,2 @@
+# Enforce LF line endings everywhere (bash scripts break with CRLF)
+* text=auto eol=lf
