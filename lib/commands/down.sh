@@ -38,7 +38,7 @@ cmd_down() {
 
     # Find the container (running or stopped)
     local container_id
-    container_id="$(find_project_container_all "$PROJECT_NAME" "$container_cmd")"
+    container_id="$(find_project_container_all "$PROJECT_NAME" "$container_cmd")" || true
 
     if [[ -z "$container_id" ]]; then
         log_info "No container found for project: $PROJECT_NAME"
@@ -96,13 +96,13 @@ find_project_container_all() {
         local container_id
         case "$cmd" in
             docker|podman|nerdctl)
-                container_id=$($cmd ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$($cmd ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
             "lima nerdctl")
-                container_id=$(lima nerdctl ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$(lima nerdctl ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
             container)
-                container_id=$(container list --all 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}')
+                container_id=$(container list --all 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
                 ;;
         esac
 
@@ -111,6 +111,22 @@ find_project_container_all() {
             return 0
         fi
     done
+
+    # Fallback: find by devcontainer label (includes stopped containers)
+    local label_id
+    case "$cmd" in
+        docker|podman|nerdctl)
+            label_id=$($cmd ps -a --filter "label=devcontainer.local_folder=$(pwd)" --format '{{.ID}}' 2>/dev/null | head -1 || true)
+            ;;
+        "lima nerdctl")
+            label_id=$(lima nerdctl ps -a --filter "label=devcontainer.local_folder=$(pwd)" --format '{{.ID}}' 2>/dev/null | head -1 || true)
+            ;;
+    esac
+
+    if [[ -n "$label_id" ]]; then
+        echo "$label_id"
+        return 0
+    fi
 
     return 1
 }
