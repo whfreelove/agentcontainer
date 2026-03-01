@@ -247,7 +247,9 @@ jobs:
   test-macos:
     name: "macOS · ${{ matrix.runtime }}"
     needs: lint
-    runs-on: macos-26
+    runs-on: [self-hosted, macOS, ARM64]
+    continue-on-error: true   # Optional until self-hosted runner is stood up
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -310,8 +312,8 @@ jobs:
         if: matrix.runtime == 'lima'
         timeout-minutes: 10
         run: |
-          brew install lima qemu
-          limactl start --name=default --vm-type=qemu --tty=false
+          brew install lima
+          limactl start --name=default --tty=false
           lima nerdctl version
           # Verify nerdctl.lima wrapper is available (used by build.sh and up.sh)
           command -v nerdctl.lima
@@ -378,6 +380,13 @@ jobs:
       - name: Stop Lima VM
         if: always() && matrix.runtime == 'lima'
         run: limactl stop default || true
+
+      - name: Cleanup self-hosted runner state
+        if: always()
+        run: |
+          limactl stop --all --force 2>/dev/null || true
+          limactl delete --all --force 2>/dev/null || true
+          rm -rf /tmp/ci-test-project
 
   # ─────────────────────────────────────────────────────────
   # Job 4: Windows — lint only
