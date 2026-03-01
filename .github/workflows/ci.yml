@@ -310,8 +310,8 @@ jobs:
         if: matrix.runtime == 'lima'
         timeout-minutes: 10
         run: |
-          brew install lima
-          limactl start --name=default --tty=false
+          brew install lima qemu
+          limactl start --name=default --vm-type=qemu --tty=false
           lima nerdctl version
           # Verify nerdctl.lima wrapper is available (used by build.sh and up.sh)
           command -v nerdctl.lima
