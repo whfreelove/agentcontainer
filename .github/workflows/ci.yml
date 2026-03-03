@@ -242,57 +242,16 @@ jobs:
           sudo journalctl -u containerd --no-pager -n 50 2>/dev/null || true
 
   # ─────────────────────────────────────────────────────────
-  # Job 3a: Watchdog — cancels still-queued macOS jobs after
-  # all other jobs finish. timeout-minutes only applies after
-  # a runner picks up the job, so without this the macOS jobs
-  # would sit queued for 24 h when no self-hosted runner exists.
-  # Cancelling the run only affects queued/in-progress jobs;
-  # already-completed jobs keep their status.
-  # ─────────────────────────────────────────────────────────
-  cancel-stale-macos:
-    name: "macOS · watchdog"
-    needs: [test-linux, test-windows]
-    runs-on: ubuntu-latest
-    if: always()
-    permissions:
-      actions: write
-    steps:
-      - name: Grace period for runner pickup
-        run: sleep 300   # 5 min after Linux/Windows finish
-
-      - name: Cancel run if macOS jobs are still queued
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId,
-              filter: 'latest',
-            });
-            const queued = jobs.jobs.filter(
-              j => j.name.startsWith('macOS ·') && j.name !== 'macOS · watchdog' && j.status === 'queued'
-            );
-            if (queued.length > 0) {
-              console.log(`Cancelling ${queued.length} still-queued macOS job(s) — no self-hosted runner available.`);
-              for (const j of queued) console.log(`  - ${j.name}`);
-              await github.rest.actions.cancelWorkflowRun({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.runId,
-              });
-            } else {
-              console.log('All macOS jobs were picked up (or already completed). Nothing to cancel.');
-            }
-
-  # ─────────────────────────────────────────────────────────
-  # Job 3b: macOS — Lima + Apple Container matrix
+  # Job 3: macOS — Lima + Apple Container matrix
+  # Requires a self-hosted Apple Silicon runner (Virtualization.framework).
+  # Skipped unless the repo variable MACOS_RUNNER is set to "true".
+  # To enable:  gh variable set MACOS_RUNNER --body true
   # ─────────────────────────────────────────────────────────
   test-macos:
     name: "macOS · ${{ matrix.runtime }}"
     needs: lint
+    if: vars.MACOS_RUNNER == 'true'
     runs-on: [self-hosted, macOS, ARM64]
-    continue-on-error: true   # Optional until self-hosted runner is stood up
     timeout-minutes: 30
     strategy:
       fail-fast: false
