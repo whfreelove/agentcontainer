@@ -46,7 +46,7 @@ No concrete plans at this time. Development is opportunistic.
 - Runtime auto-detection depends on CLI tools being on PATH; misconfigured environments may select an unintended runtime
 - Apple Container support is newer and less battle-tested than Docker/Podman paths; edge cases in mount handling and UID/GID sync may surface
 - The `EXEC_AGENT` command template uses shell expansion (`sh -c`) inside the container, which could behave unexpectedly with complex argument patterns containing special characters
-- Auth persistence relies on named Docker volumes; volume lifecycle is not managed by agentcontainer (orphaned volumes from deleted projects persist)
+- Auth persistence relies on named volumes; volume lifecycle is not managed by agentcontainer (orphaned volumes from deleted projects persist)
 
 ## Overview
 
