@@ -1,0 +1,501 @@
+[
+  {
+    "round": 1,
+    "timestamp": "2026-03-11T18:56:13Z",
+    "findings": [
+      {
+        "critic": "unknown-critic",
+        "finding": "Overview section is pure implementation specification (lines 51\u201370 describe architecture, file structure, execution flow, and configuration internals)",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers the structural concern that functional.md lines 51\u201370 ('pure Bash CLI (v0.1.0, ~2,100 lines across 12 shell scripts)', 'Entry point (bin/agentcontainer) \u2014 argument parsing, dependency checking, command dispatch') constitute design/architecture content that does not belong in a functional spec."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Two capabilities are system-centric, not actor-centric: runtime-detects-platform and agent-auth-persists use 'System' subject instead of actor-outcome framing",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that 'runtime-detects-platform: System auto-detects the best available container runtime' and 'agent-auth-persists: System persists AI agent authentication credentials' violate actor-outcome framing conventions for functional specs."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Current Limitations section leaks implementation internals (builder daemon fallback, ctr limited support, shell-profiles.json dependency) instead of user-facing impacts",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding raises the framing concern that limitations like 'Apple Container runtime cannot build images natively without the builder daemon; falls back to Docker or Lima for building, then transfers the image' are stated as technical constraints rather than user-visible consequences."
+      },
+      {
+        "critic": "why-section-partially-leaks-design-principles-critic",
+        "finding": "Why section partially leaks design principles: 'match devcontainer CLI's behavioral semantics \u2014 including its failure handling, lifecycle hooks, and configuration model' is implementation philosophy, not user burden",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that functional.md's Why section phrase 'match devcontainer CLI's behavioral semantics \u2014 including its failure handling, lifecycle hooks, and configuration model \u2014 while adding agent-specific orchestration on top' is an implementation-level design principle that does not belong in a functional spec's Why section."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Diagram places apple-container-shim in PLATFORM (eager) subgraph, contradicting lazy-load specification in OBJ-lazy-loading and prose",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers the contradiction that technical.md's Mermaid diagram places SHIM inside the unlabeled (eager) PLATFORM subgraph ('subgraph PLATFORM[lib/platform]... SHIM[apple-container-shim.sh]') while OBJ-lazy-loading states 'the Apple Container shim are lazy' and functional.md states 'the shim is loaded on demand by build/up'."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "CONTAINER_HOME call context for build_mounts_json() is unspecified: spec does not state whether it is only callable from generate_devcontainer_json() or from other contexts",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses the ambiguity that technical.md says build_mounts_json() 'requires CONTAINER_HOME (derived from REMOTE_USER in generate_devcontainer_json())' but never specifies whether this function 'is only ever called from within generate_devcontainer_json(), or whether it is also callable from other contexts'."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "find_project_container duplication rationale absent from Decisions: stop.sh's declare -f guarded duplicate is an architectural trade-off with no decision record",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that INT-container-finding acknowledges 'stop.sh carries a duplicate definition guarded by declare -f to allow standalone sourcing' and calls it 'shared infrastructure despite living in a command module,' yet the Decisions section contains no entry for this deliberate code-duplication trade-off."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "find_build_runtime() referenced but never specified: CMP-build-command references it as the Apple Container fallback selection mechanism but no interface definition exists",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers that technical.md CMP-build-command says 'falls back to an alternate Docker-compatible runtime via find_build_runtime()' but the Interfaces section defines only detect_runtime, get_container_cmd, load_config, expand_template, and find_project_container \u2014 find_build_runtime has no signature, selection criteria, or return contract documented."
+      },
+      {
+        "critic": "memory-limit-validation-failure-behavior-unspecified-in-technical-design-critic",
+        "finding": "Memory limit validation failure behavior unspecified in technical design: spec says 'validates memory limits (>=200 MiB)' but does not define whether failure aborts, warns, or auto-corrects",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "spec",
+        "match_reason": "Finding says 'The spec does not define what happens on failure \u2014 does it abort with a non-zero exit code, emit a warning and continue, or auto-correct the limit?' but @developer-starts-container:2.3 explicitly states: 'Given devcontainer.json specifies --memory=100m in runArgs, When start_apple_container() validates resource limits, Then the system SHALL log an error about the 200 MiB minimum and return exit code 1.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "find_project_container_all absent from Interfaces: CMP-lifecycle-commands references it for down.sh but it has no interface definition",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers that technical.md CMP-lifecycle-commands says 'finds any container (running or stopped) via find_project_container_all() (which uses -a flag)' while the Interfaces section defines only find_project_container and the INT-container-finding note mentions only the stop.sh duplicate without addressing the down.sh variant."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "jq dependency lacks Y-statement justification: jq is used across three critical components but no decision record justifies this choice despite OBJ-minimal-deps calling out minimizing dependencies",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that technical.md lists 'jq (JSON parsing in shim and template utilities)' as a dependency used across CMP-apple-container-shim, CMP-template-engine, and CMP-shell-command, yet OBJ-minimal-deps states 'Only requires Bash 3.1+, devcontainer CLI, envsubst, and a container runtime' (omitting jq) and no decision record explains why jq was chosen over pure-Bash JSON parsing or alternatives."
+      },
+      {
+        "critic": "missing-error-contracts-on-all-five-documented-interfaces-critic",
+        "finding": "Missing error contracts on all five documented interfaces: INT-runtime-detection, INT-container-cmd, INT-config-loading, INT-template-expansion, INT-container-finding all omit failure modes",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'INT-container-finding says exits with error but doesn't document the exit code or error message pattern' and 'INT-config-loading and INT-template-expansion document no failure behavior at all.' Logic/TECHNICAL-2 covers the same INT-container-finding error-contract gap from the angle that it 'contradicts stop/down no-container requirements' which require exit code 0. Finding Dependency/TECHNICAL-2 is broader (covers all 5 interfaces) while Logic/TECHNICAL-2 is more specific (identifies the concrete contradiction with requirements for INT-container-finding)."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "containerd (ctr) detected and mapped but not covered by any component or decision: developer assigned containerd work cannot determine if it is fully supported, detection-only, or partial",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'no component discusses how ctr is actually used for build/up/shell/stop/down operations' and 'a developer assigned containerd-related work wouldn't know if it's a fully supported runtime, a detection-only placeholder, or partially supported.' Decision Plausibility/TECHNICAL-1 covers the same issue more comprehensively: 'OBJ-runtime-abstraction states the CLI works across 6 container runtimes... However, no command module handles the ctr runtime.' Dependency/TECHNICAL-3 adds the spec-reader-confusion angle but the core concern is the same."
+      },
+      {
+        "critic": "testability-critic",
+        "finding": "TESTABILITY-1: --rebuild outcome expressed as internal function call: @developer-starts-container:1.4 asserts 'system SHALL call cmd_build()' which is an internal implementation detail, not an observable outcome",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers the testability concern that @developer-starts-container:1.4 ('the system SHALL call cmd_build() before checking image existence') specifies an internal bash function as the verifiable outcome rather than an observable behavior such as build output produced or image timestamp updated."
+      },
+      {
+        "critic": "testability-critic",
+        "finding": "TESTABILITY-2: Scenarios specify mechanism instead of observable outcome: agent-auth-persists:2.1 asserts 'SHALL run sudo chown -R' and developer-starts-container:3.1 asserts 'SHALL run groupmod and usermod'",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers the testability concern that @agent-auth-persists:2.1 ('the system SHALL run sudo chown -R to set ownership to the current user') and @developer-starts-container:3.1 ('the system SHALL run groupmod and usermod inside the container to match host UID/GID') assert internal command invocations rather than the verifiable outcomes (directory ownership matches, container user UID/GID matches host)."
+      },
+      {
+        "critic": "testability-critic",
+        "finding": "TESTABILITY-3: {uid} placeholder in @runtime-detects-platform:3.2 socket path /run/user/{uid}/podman/podman.sock is undefined, making the assertion non-deterministic",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @runtime-detects-platform:3.2 specifies socket path '/run/user/{uid}/podman/podman.sock' where {uid} 'is undefined \u2014 it is unclear whether this is a literal string, a variable name, or a stand-in for the actual numeric UID,' while all other rows in the same table (docker/darwin: ~/.docker/run/docker.sock, docker/linux: /var/run/docker.sock, lima/darwin: ~/.lima/default/sock/nerdctl.sock) provide concrete literal paths."
+      },
+      {
+        "critic": "atomicity-critic",
+        "finding": "ATOMICITY-1: Error tolerance bundled with normal execution in post-creation scenarios: developer-starts-container:4.1 and 4.2 each test two distinct behaviors in a single scenario",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @developer-starts-container:4.1 combines '(1) each entrypoint script is executed, AND (2) entrypoint failures do not prevent startup' and @developer-starts-container:4.2 combines '(1) postCreateCommand is executed, AND (2) command failure does not prevent startup' \u2014 two distinct behaviors with different preconditions that cannot be verified in a single atomic test."
+      },
+      {
+        "critic": "normative-critic",
+        "finding": "NORMATIVE-1: Ambiguous docker_path value for lima runtime: @developer-builds-container:1.1 lima row specifies 'nerdctl.lima or wrapper' where 'or' introduces two alternative values without a selection rule",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @developer-builds-container:1.1's lima row specifies docker_path as 'nerdctl.lima or wrapper' while all other rows (docker\u2192docker, podman\u2192podman, nerdctl\u2192nerdctl) provide a single concrete value, making it impossible to assert a specific --docker-path argument in a test."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Implementation/FUNCTIONAL-CRITIC-1: developer-views-status has no technical counterpart: no component, interface, or design note in technical.md addresses the status command",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'No component, interface, or design note in technical.md addresses this [developer-views-status].' Logic/TECHNICAL-1 covers this more comprehensively: 'No CMP-status-command (or equivalent) exists in the Components section, and CMP-entry-point's dispatch responsibilities do not mention status. A developer assigned to implement the status command has no component specification to work from \u2014 no description of responsibilities, no interface, and no dependency list.' Logic/TECHNICAL-1 is the survivor as it also maps the gap to all four requirement scenarios."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Requirements Coverage/functional-critic-1: --rebuild requirement contradicts documented limitation: @developer-starts-container:1.4 says --rebuild 'SHALL call cmd_build()' but omits the silent-ignore behavior when a container already exists",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'developer implementing from the requirements would build --rebuild to always trigger a rebuild, missing the actual behavior where existing containers cause it to be silently skipped.' Validation/REQUIREMENTS-1 covers this more comprehensively: 'developer-starts-container:1.4 only says the system SHALL call cmd_build() before checking image existence \u2014 with no mention of the container-existence check that occurs first and short-circuits the whole flow. Scenarios 1.1 (already running) and 1.2 (stopped) do not address what happens when --rebuild is also present.' Validation/REQUIREMENTS-1 is the survivor."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Requirements Coverage/functional-critic-2: No error scenario for agent execution when container is not running: developer-runs-agent requirements cover config preconditions but not runtime precondition failure",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @developer-runs-agent requirements handle missing config (1.1) and empty EXEC_AGENT (1.2) but have no scenario for 'what happens when the developer runs agentcontainer (no subcommand) and no container is running,' despite the functional spec describing the flow as 'finds the running container and execs EXEC_AGENT inside it' and @developer-stops-container:1.2 and @developer-opens-shell covering the no-container case explicitly."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Validation/REQUIREMENTS-1: up --rebuild silent-ignore behavior absent from requirements: functional spec Current Limitations states --rebuild is silently ignored when container exists, but @developer-starts-container:1.4 has no precondition capturing this",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding uniquely identifies that the functional spec's Current Limitations section ('agentcontainer up --rebuild is silently ignored when a container already exists (running or stopped)') is contradicted by @developer-starts-container:1.4 ('the system SHALL call cmd_build() before checking image existence') which has no Given constraining container state, and that scenarios 1.1 and 1.2 do not address the --rebuild case."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Validation/REQUIREMENTS-2: Container state absent from developer-views-status requirements: functional capability says 'inspect the detected platform, runtime, and container state' but no requirement rule covers container state display",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'no rule or scenario covers displaying the actual container state (running / stopped / not created).' Capability Accuracy/functional-critic-1 covers the same issue from a code-accuracy angle: 'the actual status implementation only calls print_runtime_info() (platform, runtime, command, availability) and print_config() (config key-values). It never queries whether a container exists, is running, or is stopped. The phrase container state is not reflected in the code.' Both identify the same root gap; Capability Accuracy/functional-critic-1 is more comprehensive as it identifies the spec overclaim and the code mismatch."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Validation/REQUIREMENTS-3: Symlink behavior missing from agent-auth-persists feature requirements: setup.sh symlink mechanism only appears in integration:5.2, not in the feature's own requirements",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @agent-auth-persists Rule 1 covers mount generation and Rule 2 covers directory ownership, but the symlink mechanism ('setup.sh SHALL move .claude.json into the volume directory and create symlinks from the workspace to the volume') documented in @integration:5.2 and referenced in functional.md ('symlinks managed by setup.sh') is absent from the feature's own requirement rules."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Verification/INFRA-1: No runnable verification commands: infra.md describes CI steps narratively and references .github/workflows/ci.yml but provides zero runnable commands to prove tests pass",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'infra.md describes CI steps narratively... but provides zero runnable commands \u2014 no ./ci.yml invocation path, no test script, no local reproduction command.' Design for Test/INFRA-1 covers this more comprehensively: 'infra.md thoroughly describes CI topology (environments, matrix jobs, runtime-specific setup) but provides zero concrete, runnable commands that prove tests pass... there is no gh workflow run, no act invocation, and no local test execution path.' Design for Test/INFRA-1 is the survivor."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Verification/INFRA-2: developer-views-status scenarios have no testable mechanism: unlike other untested capabilities, no technical reason is given for omitting status from CI despite it being a pure CLI output command with no external dependencies",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses the specific concern that infra.md marks developer-views-status as 'Not tested in CI' without providing a technical justification, while the capability 'could be added to the existing CI lifecycle step sequence \u2014 the command has no external dependencies' unlike developer-runs-agent (requires real agent binary) or agent-auth-persists (requires multi-session lifecycle)."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Verification/INFRA-3: WSL platform detection scenario is untestable with current infrastructure: CI runs plain Ubuntu only, no mock of /proc/version, no WSL runner, no conditional test proposed",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "spec",
+        "match_reason": "Finding says 'coverage gaps section acknowledges Linux/WSL detection untested at unit level but proposes no mechanism.' infra.md line 98 states 'runtime-detects-platform only has a macOS unit test; Linux/WSL detection untested at unit level' \u2014 the spec acknowledges the gap but the finding adds the specific concern that 'no mock/stub of /proc/version, no WSL runner, no conditional test' is provided, leaving 'the scenario has no viable test path under the described infrastructure.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Verification/INFRA-4: macOS unit test for detect_platform() has no described mechanism: coverage table claims this test exists but infra never identifies the framework, file location, or invocation command",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'the infra never identifies the test framework, file location, or invocation command for this test. It cannot be verified as actual coverage \u2014 it may be aspirational.' Design for Test/INFRA-2 covers this more comprehensively by identifying the direct contradiction: 'The Testing Strategy opens with There is no unit test framework, yet the Requirements Coverage table states runtime-detects-platform is covered by a macOS unit test for detect_platform(). This is a direct contradiction.' Design for Test/INFRA-2 is the survivor."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Design for Test/INFRA-1: No runnable verification commands: infra.md thoroughly describes CI topology but provides zero concrete, runnable commands proving tests pass (no gh workflow run, no act invocation, no local path)",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding is the most comprehensive version of the runnable-commands concern, explicitly stating the Completeness Checklist requires 'Concrete, runnable commands that prove tests pass' and that infra.md provides 'no gh workflow run, no act invocation, and no local test execution path.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Design for Test/INFRA-2: Unit test framework is unnamed and contradicts stated tooling: infra.md says 'There is no unit test framework' yet the Requirements Coverage table claims a 'macOS unit test for detect_platform()'",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding uniquely identifies a direct internal contradiction within infra.md between 'There is no unit test framework' (line 38) and 'runtime-detects-platform: macOS unit test for detect_platform()' (line 89), where the test's framework (BATS, shunit2, or ad-hoc script) is never named."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Logic/TECHNICAL-1: No component defined for the status command: @developer-views-status:1.1, 1.2, 2.1, 2.2 require a status subcommand but no CMP-status-command exists and CMP-entry-point's dispatch does not mention status",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding is the most comprehensive version of the status-component gap: 'No CMP-status-command (or equivalent) exists in the Components section, and CMP-entry-point's dispatch responsibilities do not mention status. A developer assigned to implement the status command has no component specification to work from \u2014 no description of responsibilities, no interface, and no dependency list.' This finding maps the gap to all four status requirement scenarios and identifies both the missing component and the missing dispatch entry."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Logic/TECHNICAL-2: INT-container-finding exit-on-error contract contradicts stop/down no-container requirements: interface 'exits with error' when no match but @developer-stops-container:1.2 and 2.3 require exit code 0",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding uniquely identifies a direct contradiction between INT-container-finding ('Returns the first matching container ID or exits with error') and @developer-stops-container:1.2 ('system SHALL log a warning and return exit code 0') and 2.3 ('system SHALL log an info message and return exit code 0'), with the additional observation that CMP-lifecycle-commands 'delegates directly to find_project_container() and find_project_container_all() with no documented mechanism for intercepting or suppressing the error exit.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Logic/TECHNICAL-3: EXEC_AGENT argument composition logic ({} placeholder, append) has no component or interface: @developer-runs-agent:2.1-2.3 define the contract but CMP-entry-point says only 'executes agent directly'",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @developer-runs-agent:2.1-2.3 define a specific three-way contract (replace {} with args; append args if no placeholder; leave command unchanged if no args) while technical.md CMP-entry-point says only 'executes agent directly when invoked without a subcommand' with no interface documenting the placeholder substitution vs. appending semantics."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Logic/TECHNICAL-4: setup.sh runtime behavior (auth ownership fix) unspecified in technical design: @agent-auth-persists:2.1-2.3 define chown logic and non-fatal semantics but CMP-init-command only documents generation, not script behavior",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @agent-auth-persists:2.1-2.3 define what setup.sh must do at runtime (sudo chown -R for non-root, skip for root, suppress chown failures) while technical.md CMP-init-command 'describes only the generation step \u2014 not the script's behavior. The chown logic, the root/non-root branch, and the non-fatal failure semantics are implementation requirements that exist in requirements files but have no corresponding component description or interface specification.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Capability Accuracy/functional-critic-1: developer-views-status overclaims container state inspection: capability says 'inspect the detected platform, runtime, and container state' but code only calls print_runtime_info() and print_config(), never queries container existence",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding uniquely identifies a code-vs-spec accuracy mismatch: functional.md capability states 'Developer can inspect the detected platform, runtime, and container state' but 'the actual status implementation (bin/agentcontainer:277-285) only calls print_runtime_info() (platform, runtime, command, availability) and print_config() (config key-values). It never queries whether a container exists, is running, or is stopped. The phrase container state is not reflected in the code.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Requirement Accuracy/STEP-MISMATCH-1: @developer-runs-agent:1.1 says missing config SHALL log error and return exit code 1, but code at bin/agentcontainer:230-244 calls show_help and exits 0",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding covers this code-accuracy mismatch: @developer-runs-agent:1.1 states 'the system SHALL log an error and return exit code 1' for missing config, but the actual code 'checks for the config file and, when missing, calls show_help and exit 0 \u2014 no error is logged and the exit code is 0, not 1. The guard inside cmd_run_agent() (line 120-123) that would log an error and return 1 is dead code because the main dispatcher never reaches it when the config is missing.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Requirement Accuracy/STEP-MISMATCH-2: --rebuild silently ignored when container already exists: code at up.sh:55-77 checks container existence before the rebuild block, but @developer-starts-container:1.4 has no Given constraining container state",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'The code at lib/commands/up.sh:55-77 checks for an existing container before the rebuild block. If a container is already running (line 56-58), it returns 0 immediately.' Validation/REQUIREMENTS-1 covers the same gap from the spec-completeness angle: 'developer-starts-container:1.4 only says the system SHALL call cmd_build() before checking image existence \u2014 with no mention of the container-existence check that occurs first and short-circuits the whole flow.' STEP-MISMATCH-2 adds the code-evidence angle (specific line numbers and code behavior); Validation/REQUIREMENTS-1 is the spec-coverage survivor."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Requirement Accuracy/MISSING-SCENARIO-1: No image transfer path for nerdctl/podman fallback builds on Apple Container: @developer-builds-container:3.2 only specifies docker transfer but 3.1 lists nerdctl/podman as valid fallbacks",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @developer-builds-container:3.1 lists lima, docker, nerdctl, and podman as valid fallback build runtimes while @developer-builds-container:3.2 only specifies 'docker save into container image load,' and transfer_to_apple_container() 'only handles lima and docker' \u2014 meaning 'if nerdctl or podman is selected as the fallback, the build succeeds but the transfer step fails with Transfer to Apple Container not supported for runtime: nerdctl.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Architecture Accuracy/TECH-1: lib/templates/ directory absent from architecture diagram and components: 5 template files not shown in Mermaid diagram despite CMP-init-command depending on them via expand_template calls",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that technical.md's architecture diagram shows lib/utils/, lib/platform/, lib/commands/ but omits lib/templates/ which contains 5 template files (agentcontainer.conf.tmpl, local.conf.tmpl, devcontainer.json.tmpl, setup.sh.tmpl, SessionStart.sh.tmpl) that CMP-init-command depends on via 'expand_template $LIB_DIR/templates/...' calls."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Architecture Accuracy/TECH-2: build_resource_args() documented as active component responsibility but has zero callers in the codebase",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that technical.md CMP-template-engine lists 'build_resource_args() constructs --memory, --cpus, --pids-limit flags' as an active responsibility, but 'the function is defined in lib/utils/template.sh:109-125, but grepping the entire codebase shows zero callers. This is dead code' \u2014 meaning the documentation implies it is 'part of the active architecture' when it is not wired into any execution path."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Architecture Accuracy/TECH-3: status command exists in entry point (bin/agentcontainer:276-285) and help text but technical.md never mentions status in components, CMP-entry-point responsibilities, or diagram",
+        "status": "COVERED",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'bin/agentcontainer lines 276\u2013285 handle a status subcommand... However, technical.md never mentions status \u2014 not in CMP-entry-point's responsibilities, not as a component, and not in the architecture diagram's command list.' Logic/TECHNICAL-1 covers this more comprehensively: 'No CMP-status-command (or equivalent) exists in the Components section, and CMP-entry-point's dispatch responsibilities do not mention status. A developer assigned to implement the status command has no component specification to work from \u2014 no description of responsibilities, no interface, and no dependency list.' Logic/TECHNICAL-1 is the survivor."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Decision Plausibility/TECHNICAL-1: OBJ-runtime-abstraction claims containerd support ('works across 6 container runtimes') but no command module handles ctr and ctr CLI has fundamentally different syntax from Docker-compatible CLIs",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap covers this. Finding uniquely identifies that OBJ-runtime-abstraction states 'A single CLI binary works across 6 container runtimes (Docker, Podman, nerdctl, containerd, Lima, Apple Container)' but 'every command dispatches on docker|podman|nerdctl, lima nerdctl, and container \u2014 none include a ctr case' and 'the ctr CLI also has fundamentally different syntax (ctr containers delete vs docker rm -f), so even fallthrough would fail. The objective overstates actual runtime coverage: containerd is detected but not usable.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Infrastructure Accuracy/INFRA-1: install.sh line count is incorrect: infra.md states '222 lines' but actual file has 179 lines",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses this factual inaccuracy: infra.md line 24 states 'install.sh, 222 lines' but 'the actual file has 179 lines. This is a factual inaccuracy that could confuse anyone trying to verify the document against the codebase.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Infrastructure Accuracy/INFRA-2: Lint job does not run on every platform as documented: macOS lint is embedded in the test job and gated behind MACOS_RUNNER variable, not unconditional",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that infra.md line 69 states lint 'Runs on every platform (Linux, macOS, Windows)' but 'the dedicated lint job (Job 1) runs only on ubuntu-latest. While the macOS and Windows jobs each include their own ShellCheck and bash -n steps, macOS lint is gated behind the same MACOS_RUNNER variable that gates integration tests. The doc implies lint coverage is unconditional across all three platforms, but macOS lint is conditional.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Infrastructure Accuracy/INFRA-3: macOS Bash 3.2 and Bash 5 dual syntax checking is architecturally significant but absent from infra.md",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that 'the CI workflow runs bash -n syntax checks against both macOS system Bash 3.2 and Homebrew Bash 5.x' as a meaningful compatibility validation, but infra.md 'doesn't mention it. For a Bash CLI tool, dual-version syntax checking is architecturally significant \u2014 it's the mechanism that catches Bash 4+ syntax accidentally leaking into the codebase.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Infrastructure Accuracy/INFRA-4: devcontainer CLI dependency is undocumented in infra.md: CI installs @devcontainers/cli via npm on Linux and macOS runners but infra.md never mentions it as a test prerequisite",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that 'the CI workflow installs @devcontainers/cli via npm (sudo npm install -g @devcontainers/cli) on both Linux (line 93) and macOS (line 345) runners, along with jq and gettext-base/gettext' but 'infra.md doesn't mention them anywhere in the testing strategy section. Someone trying to reproduce the test suite locally would not know they need npm and the devcontainer CLI installed.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Integration/TESTABILITY-1: Pervasive internal function references in Then clauses across seven integration scenarios (load_config(), image_exists(), find_project_container(), find_project_container_all(), cmd_run_agent(), transfer_to_apple_container())",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says 'Across seven scenarios, the Then clause specifies internal function names as the verifiable outcome rather than an observable behavior' citing @integration:1.1 ('via load_config()'), @integration:2.1 ('via image_exists()'), @integration:4.1-4.3 (find_project_container(), find_project_container_all()), @integration:6.1 (cmd_run_agent()), @integration:2.2 (transfer_to_apple_container()). Requirements/TESTABILITY-1 covers the same anti-pattern for a single requirements scenario (@developer-starts-container:1.4 'SHALL call cmd_build()'). Both identify the mechanism-vs-observable-outcome problem; Integration/TESTABILITY-1 covers a broader scope across the integration spec while Requirements/TESTABILITY-1 covers a single requirements scenario."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Integration/ATOMICITY-1: @integration:3.2 tests five commands (build, up, shell, stop, or down) in a single When-Then pair, making it impossible to identify which command misbehaves",
+        "status": "PARTIAL",
+        "matched_gaps": [],
+        "match_source": "finding",
+        "match_reason": "Finding says '@integration:3.2 enumerates five distinct lifecycle commands in a single When-Then pair: When the developer runs build, up, shell, stop, or down / Then each command SHALL use docker as the container command. A single automated test cannot exercise all five at once.' Requirements/ATOMICITY-1 covers the same atomicity anti-pattern in requirements scenarios (@developer-starts-container:4.1 and 4.2 each bundle happy-path and failure-tolerance assertions). Both identify the single-scenario-multiple-behaviors problem; Integration/ATOMICITY-1 applies to the integration spec while Requirements/ATOMICITY-1 applies to the requirements spec."
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Integration/CROSS-CAPABILITY-1: @integration:2.2 buries the cross-capability outcome in a 'so that' rationale clause: the Then asserts only build's transfer behavior, not that up subsequently succeeds",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @integration:2.2 is tagged @developer-builds-container @developer-starts-container but its Then clause ('build SHALL transfer the image to Apple Container via transfer_to_apple_container() so that up can find it in the Apple Container registry') only asserts build's own behavior \u2014 'the cross-capability outcome \u2014 that up subsequently succeeds using the transferred image \u2014 appears only as a so that rationale, not as a verifiable Then assertion. The @developer-starts-container capability is never actually exercised.'"
+      },
+      {
+        "critic": "unknown-critic",
+        "finding": "Integration Coverage/functional-critic-1: Agent execution missing from container discovery integration scenarios: @integration:4 covers shell/stop/down finding containers but omits developer-runs-agent which uses the same find_project_container() path",
+        "status": "UNCOVERED",
+        "matched_gaps": [],
+        "match_source": "gap",
+        "match_reason": "No existing gap or finding addresses that @integration:4 ('Container naming conventions from up SHALL enable discovery by shell, stop, and down') covers @developer-opens-shell and @developer-stops-container but not @developer-runs-agent, despite the functional overview stating the default command 'finds the running container and execs EXEC_AGENT inside it' \u2014 using the same find_project_container() discovery path \u2014 meaning 'if container naming changes in up, agent execution would break alongside shell/stop/down, but only the latter three have integration coverage.'"
+      }
+    ],
+    "commit": "8e7ca6583d2e0eba82ca7412593952391fed59da",
+    "critics": [
+      {
+        "name": "Functional",
+        "selected": true,
+        "reason": "changed: functional.md"
+      },
+      {
+        "name": "Design",
+        "selected": true,
+        "reason": "changed: technical.md"
+      },
+      {
+        "name": "Technical",
+        "selected": true,
+        "reason": "changed: technical.md"
+      },
+      {
+        "name": "Dependency",
+        "selected": true,
+        "reason": "changed: technical.md"
+      },
+      {
+        "name": "Requirements",
+        "selected": true,
+        "reason": "changed: requirements"
+      },
+      {
+        "name": "Implementation",
+        "selected": true,
+        "reason": "changed: functional.md, technical.md"
+      },
+      {
+        "name": "Requirements Coverage",
+        "selected": true,
+        "reason": "changed: functional.md, requirements, integration.feature.md"
+      },
+      {
+        "name": "Validation",
+        "selected": true,
+        "reason": "changed: functional.md, requirements, integration.feature.md"
+      },
+      {
+        "name": "Verification",
+        "selected": true,
+        "reason": "changed: infra.md, requirements, integration.feature.md"
+      },
+      {
+        "name": "Design for Test",
+        "selected": true,
+        "reason": "changed: infra.md, requirements, integration.feature.md"
+      },
+      {
+        "name": "Logic",
+        "selected": true,
+        "reason": "changed: technical.md, requirements"
+      },
+      {
+        "name": "Capability Accuracy",
+        "selected": true,
+        "reason": "changed: functional.md"
+      },
+      {
+        "name": "Requirement Accuracy",
+        "selected": true,
+        "reason": "changed: requirements"
+      },
+      {
+        "name": "Architecture Accuracy",
+        "selected": true,
+        "reason": "changed: technical.md"
+      },
+      {
+        "name": "Decision Plausibility",
+        "selected": true,
+        "reason": "changed: technical.md"
+      },
+      {
+        "name": "Infrastructure Accuracy",
+        "selected": true,
+        "reason": "changed: infra.md"
+      },
+      {
+        "name": "Integration",
+        "selected": true,
+        "reason": "changed: integration.feature.md"
+      },
+      {
+        "name": "Integration Coverage",
+        "selected": true,
+        "reason": "changed: functional.md, requirements, integration.feature.md"
+      }
+    ]
+  }
+]
