@@ -21,7 +21,7 @@ flowchart LR
     E --> F[Executable on PATH]
 ```
 
-**Installer behavior** (`install.sh`, 222 lines):
+**Installer behavior** (`install.sh`):
 - Detects OS (Darwin/Linux) and architecture (x86_64/arm64) to select the correct release asset
 - Accepts version via `AGENTCONTAINER_VERSION` env var or `--version` flag; defaults to "latest"
 - Falls back to `main` branch archive if no release tarball exists
@@ -35,7 +35,7 @@ flowchart LR
 
 ## Testing Strategy
 
-Testing is integration-based. The project validates the full command lifecycle (`init → build → up → shell → stop → down`) against real container runtimes. There is no unit test framework.
+Testing is integration-based. The project validates the full command lifecycle against real container runtimes. There is no dedicated unit test framework; where unit-level validation exists (e.g., platform detection), it uses ad-hoc inline assertions within CI workflow steps rather than a test harness.
 
 ### Test environments
 
@@ -54,11 +54,13 @@ macOS tests are gated behind the `MACOS_RUNNER` repository variable and require 
 
 Each test phase runs as a separate GitHub Actions step because `shell.sh` uses `exec` (which replaces the process). Steps:
 1. `agentcontainer init` — scaffold project config
-2. `agentcontainer build` — build container image
-3. `agentcontainer up` — start container
-4. `agentcontainer shell` — run a test command inside the container
-5. `agentcontainer stop` — stop the container
-6. `agentcontainer down` — remove the container
+2. `agentcontainer status` — verify status reports uninitialized/no-container state
+3. `agentcontainer build` — build container image
+4. `agentcontainer up` — start container
+5. `agentcontainer status` — verify status reports initialized/running state
+6. `agentcontainer shell` — run a test command inside the container
+7. `agentcontainer stop` — stop the container
+8. `agentcontainer down` — remove the container
 
 Tests create an isolated `/tmp/ci-test-project` directory for each run.
 
@@ -66,7 +68,16 @@ Tests create an isolated `/tmp/ci-test-project` directory for each run.
 
 - **ShellCheck** — lint all `.sh` files
 - **`bash -n`** — syntax validation on all scripts
-- Runs on every platform (Linux, macOS, Windows)
+
+Per-platform lint coverage:
+
+| Platform | Lint Execution | Conditional? |
+|----------|---------------|--------------|
+| Linux | Dedicated `lint` job | Unconditional — runs on every push/PR |
+| Windows | Dedicated `test-windows` job | Unconditional — runs on every push/PR |
+| macOS | Embedded in `test-macos` job | Conditional — gated by `MACOS_RUNNER` repository variable. When `MACOS_RUNNER` is not set, macOS lint does not execute. |
+
+The macOS lint step includes a dual-Bash syntax check: `bash -n` runs against both the system Bash 3.2 (`/bin/bash`) and Homebrew Bash 5.x. The Bash 3.2 check serves as the compatibility gate preventing Bash 4+ syntax from entering the codebase, maintaining the Bash 3.1+ compatibility requirement documented in the technical spec.
 
 ### Runtime-specific setup in CI
 
@@ -85,17 +96,59 @@ Tests create an isolated `/tmp/ci-test-project` directory for each run.
 | `developer-runs-agent` | Not directly tested in CI |
 | `developer-opens-shell` | CI shell step |
 | `developer-stops-container` | CI stop step + down step |
-| `developer-views-status` | Not tested in CI |
-| `runtime-detects-platform` | macOS unit test for `detect_platform()` |
+| `developer-views-status` | CI lifecycle steps (after init and after up) |
+| `runtime-detects-platform` | Ad-hoc inline assertion in macOS CI job (`ci.yml`, `test-macos` job) |
 | `agent-auth-persists` | Not tested in CI |
 
 ### Coverage gaps
 
 - No unit tests for config parsing, template expansion, or argument handling
 - `developer-runs-agent` not tested (requires a real agent binary in the container)
-- `developer-views-status` not tested
 - `agent-auth-persists` not tested (requires multi-session lifecycle)
-- `runtime-detects-platform` only has a macOS unit test; Linux/WSL detection untested at unit level
+- `runtime-detects-platform` Linux/WSL detection untested at unit level. WSL detection is testable via mock: `detect_platform()` uses `grep` on `/proc/version`, which can be unit-tested by providing a mock version file containing `microsoft`. Making the version file path injectable would enable testing on plain Linux CI runners without requiring a WSL environment.
+
+### Verification commands
+
+**Local verification** (single runtime, requires test prerequisites installed):
+
+```bash
+# Lint
+shellcheck lib/*.sh bin/agentcontainer install.sh
+bash -n lib/*.sh bin/agentcontainer install.sh
+
+# Integration lifecycle
+dir=$(mktemp -d)
+cd "$dir"
+agentcontainer init
+agentcontainer status
+agentcontainer build
+agentcontainer up
+agentcontainer status
+agentcontainer shell -- echo "smoke test"
+agentcontainer stop
+agentcontainer down
+rm -rf "$dir"
+```
+
+Local runs cover a single container runtime on the host platform. Full matrix coverage requires CI.
+
+**CI invocation:**
+- Pushing to `main` or opening a PR triggers the full matrix automatically
+- Manual dispatch: `gh workflow run ci.yml` (requires GitHub CLI)
+
+### Test prerequisites
+
+**Integration tests** require:
+- A supported container runtime (Docker, Podman, nerdctl, Lima, or Apple Container)
+- **devcontainer CLI** (`npm install -g @devcontainers/cli`) — the underlying engine that agentcontainer wraps; an architectural dependency, not merely a test utility
+- **jq** — JSON processing for config manipulation
+- **envsubst** (from `gettext`) — template variable expansion
+
+**Lint** requires:
+- **ShellCheck** — static analysis for shell scripts
+- **Bash** — `bash -n` for syntax validation (macOS jobs require both system Bash 3.2 and Homebrew Bash 5.x)
+
+CI workflows install these dependencies automatically. Local reproduction requires manual installation.
 
 ### CI/CD integration
 

@@ -33,8 +33,16 @@
 `@developer-starts-container:1.4`
 #### Scenario: --rebuild triggers a fresh build before starting
 
+- Given no container for the project exists
 - When the developer runs `agentcontainer up --rebuild`
-- Then the system SHALL call `cmd_build()` before checking image existence
+- Then the system SHALL build a new image before starting the container
+
+`@developer-starts-container:1.5`
+#### Scenario: --rebuild with an existing container is silently ignored
+
+- Given a container for the project already exists
+- When the developer runs `agentcontainer up --rebuild`
+- Then the system SHALL handle the existing container as if `--rebuild` was not specified
 
 ---
 
@@ -84,25 +92,31 @@
 ### Rule: Apple Container startup SHALL sync UID/GID for non-root users
 
 `@developer-starts-container:3.1`
-#### Scenario: UID/GID sync for non-root remoteUser
+#### Scenario: Container user UID/GID matches host for non-root remoteUser
 
 - Given devcontainer.json specifies `remoteUser` as "vscode" and `updateRemoteUserUID` as true
-- When `start_apple_container()` creates the container
-- Then the system SHALL run `groupmod` and `usermod` inside the container to match host UID/GID
-- And the system SHALL fix home directory ownership with `chown`
+- When the system creates the Apple Container
+- Then the container user's UID and GID SHALL match the host user's UID and GID
 
 `@developer-starts-container:3.2`
+#### Scenario: Home directory owned by container user after UID/GID sync
+
+- Given devcontainer.json specifies `remoteUser` as "vscode" and `updateRemoteUserUID` as true
+- When the system creates the Apple Container
+- Then the remote user's home directory SHALL be owned by the container user
+
+`@developer-starts-container:3.3`
 #### Scenario: UID/GID sync skipped for root user
 
 - Given devcontainer.json specifies `remoteUser` as "root"
-- When `start_apple_container()` creates the container
+- When the system creates the Apple Container
 - Then the system SHALL skip the UID/GID sync step
 
-`@developer-starts-container:3.3`
+`@developer-starts-container:3.4`
 #### Scenario: UID/GID sync failure is non-fatal
 
-- Given the `usermod` command fails inside the container
-- When `start_apple_container()` attempts UID/GID sync
+- Given UID/GID sync fails inside the container
+- When the system attempts UID/GID sync during Apple Container startup
 - Then the system SHALL log a warning but continue startup
 
 ---

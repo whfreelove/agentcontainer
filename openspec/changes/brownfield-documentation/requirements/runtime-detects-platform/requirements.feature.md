@@ -120,6 +120,8 @@
 | podman | linux | /run/user/{uid}/podman/podman.sock |
 | lima | darwin | ~/.lima/default/sock/nerdctl.sock |
 
+> **Note:** `{uid}` is the numeric user ID of the invoking user, as returned by `id -u`. The Podman socket path is user-specific and cannot be expressed as a single concrete literal.
+
 `@runtime-detects-platform:3.3`
 #### Scenario: Runtime availability validated via version command
 

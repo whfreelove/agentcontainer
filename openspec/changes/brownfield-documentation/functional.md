@@ -10,7 +10,7 @@ Agentcontainer provides devcontainers' isolation and CI/production-matching expe
 - `developer-runs-agent`: Developer can execute an AI agent inside the running container with optional arguments
 - `developer-opens-shell`: Developer can open an interactive shell or run arbitrary commands inside the running container
 - `developer-stops-container`: Developer can stop or stop-and-remove the running container
-- `developer-views-status`: Developer can inspect the detected platform, runtime, and container state
+- `developer-views-status`: Developer can inspect the detected platform, runtime availability, and project configuration
 - `runtime-detects-platform`: System auto-detects the best available container runtime for the host platform (macOS, Linux, WSL)
 - `agent-auth-persists`: System persists AI agent authentication credentials across container rebuilds via named volumes and symlinks
 
@@ -30,12 +30,13 @@ Individual developers running AI coding agents (Claude Code, OpenCode) on macOS,
 
 ### Current Limitations
 
-- Apple Container runtime cannot build images natively without the builder daemon; falls back to Docker or Lima for building, then transfers the image
+- Apple Container users may experience slower builds when the native builder daemon is unavailable, as images must be built via an alternate runtime and transferred
 - Only two AI agents have official devcontainer features (Claude Code, OpenCode); other agents (Gemini CLI, Codex CLI, Amazon Q, Aider) require manual setup via `setup.sh`
-- The `containerd` (ctr) runtime is detected on Linux but has limited support compared to Docker/Podman/nerdctl
+- Developers using the containerd runtime directly may encounter unsupported operations that work with Docker, Podman, or nerdctl
 - No built-in health checking or readiness probes for started containers
-- Shell profile resolution depends on `.agentcontainer/shell-profiles.json` existing; built-in profiles are limited to bash, zsh, and sh
+- Developers who use shells other than bash, zsh, or sh must define custom shell profiles in `.agentcontainer/shell-profiles.json`; without this file, only the three built-in shells are available
 - `agentcontainer up --rebuild` is silently ignored when a container already exists (running or stopped); the user must run `down` before `up --rebuild` to trigger a fresh build
+- When building with nerdctl or Podman on Apple Container, the image cannot be transferred to Apple Container after the build; the developer must use Docker or Lima as the build runtime to complete the Apple Container workflow
 
 ### Planned Future Work
 
@@ -50,21 +51,18 @@ No concrete plans at this time. Development is opportunistic.
 
 ## Overview
 
-Agentcontainer is a pure Bash CLI (v0.1.0, ~2,100 lines across 12 shell scripts) that wraps the devcontainer CLI with agent-specific orchestration.
+Agentcontainer is a CLI tool that manages the full lifecycle of containerized AI agent environments. The developer workflow follows a consistent sequence:
 
-**Architecture:**
-- **Entry point** (`bin/agentcontainer`) — argument parsing, dependency checking, command dispatch
-- **Command modules** (`lib/commands/`) — `init`, `build`, `up`, `shell`, `stop`, `down`, each in a separate file sourced on demand
-- **Platform layer** (`lib/platform/`) — runtime detection across 6 runtimes (Docker, Podman, nerdctl, Lima, Apple Container, containerd) and an Apple Container shim that translates Docker CLI calls for the devcontainer CLI; `detect.sh` is loaded eagerly at startup, the shim is loaded on demand by build/up
-- **Utilities** (`lib/utils/`) — config loading (cascading `agentcontainer.conf` → `local.conf`), template expansion via `envsubst`; loaded eagerly at startup
-- **Templates** (`lib/templates/`) — project config, local config, devcontainer.json, setup script, and Claude Code SessionStart hook
+**Commands:**
+- `agentcontainer init` — Scaffolds container configuration for a project, accepting options for base image, agent, features, shell, and resource limits. Generates project and local configuration files plus a devcontainer definition.
+- `agentcontainer build` — Builds the container image using whichever container runtime is available on the host. The developer does not need to specify or configure the runtime.
+- `agentcontainer up` — Starts the container environment. If the container already exists, it resumes it; otherwise it creates a new one. Resource limits and workspace mounts are applied automatically.
+- `agentcontainer` (no subcommand) — Launches the configured AI agent inside the running container, forwarding any arguments after `--`.
+- `agentcontainer shell` — Opens an interactive shell inside the container. Supports selecting a shell profile or running a one-off command.
+- `agentcontainer stop` — Stops the running container, preserving its state for later resumption.
+- `agentcontainer down` — Stops and removes the container entirely.
+- `agentcontainer status` — Displays the detected platform, runtime availability, and project configuration.
 
-**Execution flow:**
-1. `init` scaffolds `.agentcontainer/` and `.devcontainer/` from templates with user-supplied or default values
-2. `build` detects the platform and runtime, then delegates to `devcontainer build` with the appropriate `--docker-path`; on Apple Container, it either uses a native shim or builds with Docker/Lima and transfers the image
-3. `up` checks for an existing container (running or stopped) and either starts it or creates a new one via `devcontainer up`; Apple Container gets a custom startup path with mount parsing, volume creation, UID/GID sync, and feature entrypoint execution
-4. The default command (no subcommand) finds the running container and execs `EXEC_AGENT` inside it, passing any `--` arguments
-5. `shell` resolves a shell profile (built-in or from `shell-profiles.json`) and execs into the container
-6. `stop` and `down` gracefully stop or force-remove the container
+**Configuration:** The developer manages two optional configuration files — a project-level file (intended to be committed and shared with the team) and a local-level file (for machine-specific overrides like resource limits and runtime preferences). Both are generated by `init` and can be edited directly.
 
-**Configuration model:** Two-layer config (`agentcontainer.conf` for shared project settings, `local.conf` for machine-specific overrides) plus a generated `devcontainer.json` that the devcontainer CLI consumes. Auth persistence uses a named volume (`${PROJECT_NAME}-claude-home`) mounted at `~/.claude` inside the container, with symlinks managed by `setup.sh`.
+**Automatic behaviors:** The tool automatically detects the host platform and selects the best available container runtime without manual configuration. AI agent authentication credentials persist across container rebuilds, so the developer does not need to re-authenticate after running `down` and rebuilding.

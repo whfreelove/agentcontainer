@@ -59,3 +59,35 @@
 - Given the `chown` command fails inside the container
 - When `setup.sh` attempts the ownership fix
 - Then the failure SHALL be suppressed and setup SHALL continue
+
+---
+
+`@agent-auth-persists:3`
+### Rule: Setup script SHALL symlink workspace auth files into the persistent volume
+
+`@agent-auth-persists:3.1`
+#### Scenario: Existing workspace auth file is moved into volume and symlinked
+
+- Given a credential file exists in the workspace (e.g. `.claude.json`)
+- And the file is a regular file, not a symlink
+- When `persist_claude_file()` executes during `setup.sh`
+- Then the file SHALL be moved into the named volume directory
+- And a symlink SHALL be created from the original workspace path to the volume copy
+
+`@agent-auth-persists:3.2`
+#### Scenario: Auth file present in volume but missing from workspace gets symlinked
+
+- Given a credential file exists in the named volume directory
+- And no corresponding file or symlink exists at the workspace path
+- When `persist_claude_file()` executes during `setup.sh`
+- Then a symlink SHALL be created from the workspace path to the volume copy
+- And the volume file SHALL not be moved or duplicated
+
+`@agent-auth-persists:3.3`
+#### Scenario: Already-symlinked auth file is a no-op
+
+- Given a symlink already exists at the workspace credential path
+- And the symlink points to the named volume directory
+- When `persist_claude_file()` executes during `setup.sh`
+- Then the function SHALL take no action
+- And the existing symlink SHALL remain unchanged

@@ -22,8 +22,24 @@
 |---------|-------------|
 | docker | docker |
 | podman | podman |
-| lima | nerdctl.lima or wrapper |
 | nerdctl | nerdctl |
+
+`@developer-builds-container:1.3`
+#### Scenario: Lima build uses nerdctl.lima when available on PATH
+
+- Given the detected runtime is lima
+- And `nerdctl.lima` is available on PATH
+- When the developer runs `agentcontainer build`
+- Then the system SHALL invoke `devcontainer build` with `--docker-path nerdctl.lima`
+
+`@developer-builds-container:1.4`
+#### Scenario: Lima build uses a wrapper script when nerdctl.lima is not on PATH
+
+- Given the detected runtime is lima
+- And `nerdctl.lima` is not available on PATH
+- When the developer runs `agentcontainer build`
+- Then the system SHALL create a wrapper script that delegates to `lima nerdctl`
+- And SHALL invoke `devcontainer build` with `--docker-path` set to the wrapper script path
 
 `@developer-builds-container:1.2`
 #### Scenario: Build passes --no-cache to devcontainer CLI
@@ -74,7 +90,7 @@
 - Given the detected runtime is apple-container
 - And the native builder is unavailable
 - And "<available_runtime>" is installed
-- When the system calls `find_build_runtime()`
+- When the developer runs `agentcontainer build`
 - Then the system SHALL select "<available_runtime>" as the build runtime
 
 ##### Examples
@@ -87,12 +103,19 @@
 | podman |
 
 `@developer-builds-container:3.2`
-#### Scenario: Image transfer from fallback runtime to Apple Container
+#### Scenario Outline: Image transfer from fallback runtime to Apple Container
 
-- Given the system built an image using docker as fallback runtime
+- Given the system built an image using "<fallback_runtime>" as fallback runtime
 - When the build completes
-- Then the system SHALL pipe `docker save` into `container image load`
+- Then the system SHALL pipe `<save_command>` into `container image load`
 - And the image SHALL be available in the Apple Container registry
+
+##### Examples
+
+| fallback_runtime | save_command |
+|------------------|--------------|
+| docker | docker save |
+| lima | lima nerdctl save |
 
 `@developer-builds-container:3.3`
 #### Scenario: Image transfer skipped when image already exists
@@ -110,3 +133,17 @@
 - And no Docker-compatible runtime is installed
 - When the developer runs `agentcontainer build`
 - Then the system SHALL log an error and return exit code 1
+
+`@developer-builds-container:3.5`
+#### Scenario Outline: Image transfer fails for unsupported fallback runtimes
+
+- Given the system built an image using "<unsupported_runtime>" as fallback runtime
+- When the transfer step runs
+- Then the system SHALL fail with a warning that "<unsupported_runtime>" does not support image transfer to Apple Container
+
+##### Examples
+
+| unsupported_runtime |
+|---------------------|
+| nerdctl |
+| podman |

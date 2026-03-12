@@ -10,7 +10,7 @@
 
 - Given `.agentcontainer/agentcontainer.conf` does not exist
 - When the developer runs `agentcontainer` without a subcommand
-- Then the system SHALL log an error and return exit code 1
+- Then the system SHALL display help information and return exit code 0
 
 `@developer-runs-agent:1.2`
 #### Scenario: Empty EXEC_AGENT produces an error with usage examples
@@ -18,6 +18,22 @@
 - Given `agentcontainer.conf` exists but `EXEC_AGENT` is empty
 - When the developer runs `agentcontainer`
 - Then the system SHALL log an error with example values and return exit code 1
+
+`@developer-runs-agent:1.3`
+#### Scenario: No running container produces an error
+
+- Given `.agentcontainer/agentcontainer.conf` exists and `EXEC_AGENT` is configured
+- And no container is currently running for the project
+- When the developer runs `agentcontainer` without a subcommand
+- Then the system SHALL log an error and return exit code 1
+
+`@developer-runs-agent:1.4`
+#### Scenario: Agent exec finds container by project name pattern
+
+- Given `.agentcontainer/agentcontainer.conf` exists and `EXEC_AGENT` is configured
+- And a container named `agentcontainer-<project>` is running
+- When the developer runs `agentcontainer` without a subcommand
+- Then the system SHALL execute the agent command inside the named container
 
 ---
 
