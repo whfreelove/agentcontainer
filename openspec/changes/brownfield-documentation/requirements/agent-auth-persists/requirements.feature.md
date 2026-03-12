@@ -44,7 +44,7 @@
 - Given the container is running as a non-root user
 - And `$HOME/.claude` exists inside the container
 - When `setup.sh` executes as `postCreateCommand`
-- Then the system SHALL run `sudo chown -R` to set ownership to the current user
+- Then the auth directory `$HOME/.claude` SHALL be owned by the current user
 
 `@agent-auth-persists:2.2`
 #### Scenario: Root user skips ownership fix
@@ -70,7 +70,7 @@
 
 - Given a credential file exists in the workspace (e.g. `.claude.json`)
 - And the file is a regular file, not a symlink
-- When `persist_claude_file()` executes during `setup.sh`
+- When setup.sh processes the credential file during postCreateCommand
 - Then the file SHALL be moved into the named volume directory
 - And a symlink SHALL be created from the original workspace path to the volume copy
 
@@ -79,7 +79,7 @@
 
 - Given a credential file exists in the named volume directory
 - And no corresponding file or symlink exists at the workspace path
-- When `persist_claude_file()` executes during `setup.sh`
+- When setup.sh processes the credential file during postCreateCommand
 - Then a symlink SHALL be created from the workspace path to the volume copy
 - And the volume file SHALL not be moved or duplicated
 
@@ -88,6 +88,6 @@
 
 - Given a symlink already exists at the workspace credential path
 - And the symlink points to the named volume directory
-- When `persist_claude_file()` executes during `setup.sh`
-- Then the function SHALL take no action
+- When setup.sh processes the credential file during postCreateCommand
+- Then the system SHALL take no action
 - And the existing symlink SHALL remain unchanged

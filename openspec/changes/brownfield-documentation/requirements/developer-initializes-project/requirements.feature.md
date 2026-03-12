@@ -37,11 +37,14 @@
 - Then the system SHALL log an error and return exit code 1
 
 `@developer-initializes-project:2.2`
-#### Scenario: Init with --force overwrites project config but preserves local config
+#### Scenario: Init with --force overwrites all template-derived files but preserves user-owned files
 
-- Given `.agentcontainer/agentcontainer.conf` and `.agentcontainer/local.conf` already exist
+- Given `.agentcontainer/` already exists with `agentcontainer.conf`, `local.conf`, `setup.sh`, `.claude/hooks/SessionStart.sh`, and `.devcontainer/devcontainer.json`
 - When the developer runs `agentcontainer init --force`
 - Then the system SHALL overwrite `agentcontainer.conf`
+- And the system SHALL overwrite `devcontainer.json`
+- And the system SHALL overwrite `setup.sh`
+- And the system SHALL overwrite `SessionStart.sh`
 - But the system SHALL preserve the existing `local.conf`
 
 ---

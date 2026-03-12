@@ -93,19 +93,19 @@ The macOS lint step includes a dual-Bash syntax check: `bash -n` runs against bo
 | `developer-initializes-project` | CI init step |
 | `developer-builds-container` | CI build step |
 | `developer-starts-container` | CI up step |
-| `developer-runs-agent` | Not directly tested in CI |
+| `developer-runs-agent` | Partially testable: Rule 1 precondition validation (missing config, empty EXEC_AGENT, no running container) testable without agent binary; Rules 2–3 not tested |
 | `developer-opens-shell` | CI shell step |
 | `developer-stops-container` | CI stop step + down step |
 | `developer-views-status` | CI lifecycle steps (after init and after up) |
 | `runtime-detects-platform` | Ad-hoc inline assertion in macOS CI job (`ci.yml`, `test-macos` job) |
-| `agent-auth-persists` | Not tested in CI |
+| `agent-auth-persists` | Partially testable: Rule 3 symlink scenarios testable within single container lifecycle (init → build → up → verify symlinks); Rules 1–2 not tested |
 
 ### Coverage gaps
 
 - No unit tests for config parsing, template expansion, or argument handling
-- `developer-runs-agent` not tested (requires a real agent binary in the container)
-- `agent-auth-persists` not tested (requires multi-session lifecycle)
-- `runtime-detects-platform` Linux/WSL detection untested at unit level. WSL detection is testable via mock: `detect_platform()` uses `grep` on `/proc/version`, which can be unit-tested by providing a mock version file containing `microsoft`. Making the version file path injectable would enable testing on plain Linux CI runners without requiring a WSL environment.
+- `developer-runs-agent` partially testable: Rule 1 precondition validation scenarios (missing config → help + exit 0, empty EXEC_AGENT → error, no running container → error) exercise error paths that exit before agent execution and do not require a real agent binary. Rules 2 (argument handling) and 3 (TTY detection) remain untestable in CI because they require a real agent binary to observe command construction behavior.
+- `agent-auth-persists` partially testable: Rule 3 symlink scenarios (existing file moved and symlinked, volume-only file symlinked, already-symlinked file is no-op) are testable within a single container lifecycle (init → build → up → verify symlinks exist). Rules 1 (volume persistence across container removal) and 2 (ownership fix) remain untestable in CI because they require a multi-session lifecycle or specific non-root user context.
+- `runtime-detects-platform` Linux/WSL detection untested at unit level. WSL detection is testable via mock: `detect_platform()` uses `grep` on `/proc/version`, which can be unit-tested by providing a mock version file containing `microsoft`.
 
 ### Verification commands
 

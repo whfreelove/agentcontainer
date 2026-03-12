@@ -117,6 +117,7 @@
 |---------|----------|--------|
 | docker | darwin | ~/.docker/run/docker.sock |
 | docker | linux | /var/run/docker.sock |
+| docker | wsl | /var/run/docker.sock |
 | podman | linux | /run/user/{uid}/podman/podman.sock |
 | lima | darwin | ~/.lima/default/sock/nerdctl.sock |
 

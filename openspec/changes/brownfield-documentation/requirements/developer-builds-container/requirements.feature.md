@@ -139,7 +139,7 @@
 
 - Given the system built an image using "<unsupported_runtime>" as fallback runtime
 - When the transfer step runs
-- Then the system SHALL fail with a warning that "<unsupported_runtime>" does not support image transfer to Apple Container
+- Then the system SHALL log a warning that "<unsupported_runtime>" does not support image transfer to Apple Container and return exit code 1
 
 ##### Examples
 
