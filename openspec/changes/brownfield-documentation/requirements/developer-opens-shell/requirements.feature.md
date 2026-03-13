@@ -69,3 +69,15 @@
 - Given stdin is a TTY and stdout is a TTY
 - When the developer runs `agentcontainer shell`
 - Then the system SHALL pass `-i` and `-t` flags to the container exec command
+
+---
+
+`@developer-opens-shell:4`
+### Rule: Shell exec SHALL fail with an error when no running container exists
+
+`@developer-opens-shell:4.1`
+#### Scenario: No running container produces an error
+
+- Given no container is currently running for the project
+- When the developer runs `agentcontainer shell`
+- Then the system SHALL log an error and return exit code 1

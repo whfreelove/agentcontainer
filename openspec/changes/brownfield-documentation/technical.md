@@ -170,7 +170,7 @@ sequenceDiagram
 
 `CMP-setup-script`: **lib/templates/setup.sh.tmpl → .devcontainer/setup.sh**
 - **Description**: Container-side component generated from `lib/templates/setup.sh.tmpl`, executed as a `postCreateCommand` inside the container
-- **Responsibilities**: Fixes auth directory ownership for non-root users via `sudo chown -R` with failure suppression (`|| true`). Skips ownership fix when running as root. Persists auth credential files by moving them into the named volume directory and creating symlinks. Treats all operations as non-fatal per `DEC-non-fatal-post-creation`
+- **Responsibilities**: Fixes auth directory ownership for non-root users via `sudo chown -R` with failure suppression (`|| true`). Skips ownership fix when running as root. Persists auth credential files by moving them into the named volume directory and creating symlinks: `.claude.json` (the primary auth file, processed by name) and `.claude.json.backup.*` (timestamped backup files, discovered via glob pattern in both workspace and volume directories). Treats all operations as non-fatal per `DEC-non-fatal-post-creation`
 - **Dependencies**: Named volume mounted at container `~/.claude`
 
 `CMP-templates`: **lib/templates/**
@@ -182,7 +182,7 @@ sequenceDiagram
 
 `INT-runtime-detection`: **detect_runtime**
 - **Signature**: `detect_runtime([platform]) → runtime-name`
-- **Behavior**: Returns a string identifying the container runtime. Checks `CONTAINER_RUNTIME` override first, then `MACOS_RUNTIME` on darwin. Falls through a priority-ordered probe chain per platform: macOS (container → lima → docker), Linux/WSL (nerdctl → podman → ctr → docker). Returns `"none"` if no runtime found
+- **Behavior**: Returns a string identifying the container runtime. Checks `CONTAINER_RUNTIME` override first, then on darwin checks `MACOS_RUNTIME` — when set to `"auto"` (the default after config loading), falls through the priority-ordered macOS probe chain; when set to a specific runtime name, uses that runtime directly. Falls through a priority-ordered probe chain per platform: macOS (container → lima → docker), Linux/WSL (nerdctl → podman → ctr → docker). Returns `"none"` if no runtime found
 - **Error behavior**: Returns the string `"none"` when no runtime is detected — this is a sentinel value, not an error exit. Callers must handle `"none"` explicitly (e.g., display a diagnostic or abort with a user-facing message)
 
 `INT-container-cmd`: **get_container_cmd**
@@ -246,3 +246,5 @@ sequenceDiagram
 - **Apple Container shim tightly coupled to devcontainer CLI fallback behavior** → The shim relies on devcontainer CLI probing `buildx` first and falling back to plain `docker build`. If devcontainer CLI changes its probe order or removes the fallback, the shim breaks silently. Mitigation: CI tests exercise the full Apple Container build path on macOS.
 
 - **Container finding uses pattern matching that is fragile if naming conventions change** → `find_project_container()` matches against `vsc-${project}-`, `${project}_devcontainer`, and `agentcontainer-${project}` patterns, plus a label-based fallback. If devcontainer CLI changes its naming convention, the primary patterns break. Mitigation: label-based fallback (`devcontainer.local_folder`) provides a more stable secondary path.
+
+- **`detect_platform()` hardcodes `/proc/version`, limiting WSL detection unit testing to environments with a real `/proc/version` file** → Making the version file path an injectable parameter would enable mock-based testing on plain Linux CI runners without requiring a WSL environment.

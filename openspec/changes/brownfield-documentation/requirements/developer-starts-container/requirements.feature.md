@@ -38,11 +38,18 @@
 - Then the system SHALL build a new image before starting the container
 
 `@developer-starts-container:1.5`
-#### Scenario: --rebuild with an existing container is silently ignored
+#### Scenario: --rebuild with a running container logs already running
 
-- Given a container for the project already exists
+- Given a container for the project is already running
 - When the developer runs `agentcontainer up --rebuild`
-- Then the system SHALL handle the existing container as if `--rebuild` was not specified
+- Then the system SHALL log that the container is already running and return exit code 0
+
+`@developer-starts-container:1.6`
+#### Scenario: --rebuild with a stopped container restarts it
+
+- Given a container for the project exists but is stopped
+- When the developer runs `agentcontainer up --rebuild`
+- Then the system SHALL start the existing container
 
 ---
 

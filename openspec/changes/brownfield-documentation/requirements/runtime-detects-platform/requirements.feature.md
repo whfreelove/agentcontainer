@@ -49,7 +49,7 @@
 `@runtime-detects-platform:2.3`
 #### Scenario Outline: macOS runtime probe priority
 
-- Given the platform is "darwin" and no overrides are set
+- Given the platform is "darwin" and `MACOS_RUNTIME` is set to "auto" (the default)
 - And "<available>" is the first available runtime CLI
 - When `detect_runtime()` runs
 - Then the runtime SHALL be "<detected>"

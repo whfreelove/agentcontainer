@@ -107,15 +107,14 @@
 
 - Given the system built an image using "<fallback_runtime>" as fallback runtime
 - When the build completes
-- Then the system SHALL pipe `<save_command>` into `container image load`
-- And the image SHALL be available in the Apple Container registry
+- Then the image SHALL be available in the Apple Container registry
 
 ##### Examples
 
-| fallback_runtime | save_command |
-|------------------|--------------|
-| docker | docker save |
-| lima | lima nerdctl save |
+| fallback_runtime |
+|------------------|
+| docker |
+| lima |
 
 `@developer-builds-container:3.3`
 #### Scenario: Image transfer skipped when image already exists

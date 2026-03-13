@@ -63,31 +63,61 @@
 ---
 
 `@agent-auth-persists:3`
-### Rule: Setup script SHALL symlink workspace auth files into the persistent volume
+### Rule: Setup script SHALL symlink the primary auth file `.claude.json` into the persistent volume
 
 `@agent-auth-persists:3.1`
-#### Scenario: Existing workspace auth file is moved into volume and symlinked
+#### Scenario: Existing workspace `.claude.json` is moved into volume and symlinked
 
-- Given a credential file exists in the workspace (e.g. `.claude.json`)
-- And the file is a regular file, not a symlink
-- When setup.sh processes the credential file during postCreateCommand
-- Then the file SHALL be moved into the named volume directory
-- And a symlink SHALL be created from the original workspace path to the volume copy
+- Given `.claude.json` exists in the workspace as a regular file
+- And the file is not a symlink
+- When setup.sh processes `.claude.json` during postCreateCommand
+- Then the file SHALL be moved into the named volume directory `$HOME/.claude`
+- And a symlink SHALL be created from `$HOME/.claude.json` to the volume copy
 
 `@agent-auth-persists:3.2`
-#### Scenario: Auth file present in volume but missing from workspace gets symlinked
+#### Scenario: `.claude.json` present in volume but missing from workspace gets symlinked
 
-- Given a credential file exists in the named volume directory
-- And no corresponding file or symlink exists at the workspace path
-- When setup.sh processes the credential file during postCreateCommand
-- Then a symlink SHALL be created from the workspace path to the volume copy
+- Given `.claude.json` exists in the named volume directory `$HOME/.claude`
+- And no `.claude.json` file or symlink exists at `$HOME/.claude.json`
+- When setup.sh processes `.claude.json` during postCreateCommand
+- Then a symlink SHALL be created from `$HOME/.claude.json` to the volume copy
 - And the volume file SHALL not be moved or duplicated
 
 `@agent-auth-persists:3.3`
-#### Scenario: Already-symlinked auth file is a no-op
+#### Scenario: Already-symlinked `.claude.json` is a no-op
 
-- Given a symlink already exists at the workspace credential path
+- Given a symlink already exists at `$HOME/.claude.json`
 - And the symlink points to the named volume directory
-- When setup.sh processes the credential file during postCreateCommand
+- When setup.sh processes `.claude.json` during postCreateCommand
 - Then the system SHALL take no action
 - And the existing symlink SHALL remain unchanged
+
+---
+
+`@agent-auth-persists:4`
+### Rule: Setup script SHALL discover and persist backup auth files via glob pattern
+
+`@agent-auth-persists:4.1`
+#### Scenario: Backup files in workspace are moved into volume and symlinked
+
+- Given one or more files matching the glob `.claude.json.backup.*` exist in the workspace `$HOME`
+- And the files are regular files, not symlinks
+- When setup.sh discovers backup files during postCreateCommand
+- Then each matching file SHALL be moved into the named volume directory `$HOME/.claude`
+- And a symlink SHALL be created from the original workspace path to each volume copy
+
+`@agent-auth-persists:4.2`
+#### Scenario: Backup files in volume but missing from workspace get symlinked
+
+- Given one or more files matching `.claude.json.backup.*` exist in the named volume directory `$HOME/.claude`
+- And no corresponding file or symlink exists at the workspace path for each match
+- When setup.sh discovers backup files during postCreateCommand
+- Then a symlink SHALL be created from the workspace path to each volume copy
+
+`@agent-auth-persists:4.3`
+#### Scenario: Backup files discovered from both workspace and volume directories
+
+- Given setup.sh scans for `.claude.json.backup.*` files
+- When backup files exist in both `$HOME` and `$HOME/.claude`
+- Then the system SHALL process backup files from both directories
+- And the combined set of discovered files SHALL be deduplicated by filename before processing
