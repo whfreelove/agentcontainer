@@ -61,7 +61,28 @@ case "$1" in
                     args+=("$1"); shift ;;
             esac
         done
-        exec container build "${args[@]}"
+        # Workaround: Apple Container 0.10.0 drops nested files from the build
+        # context when the path contains symlinks (/var, /tmp on macOS).
+        # Copy context to a symlink-free path under $PWD before building.
+        # See: test/repro-container-build-context-bug.sh
+        ctx="${args[-1]}"
+        relocated_ctx=""
+        if [[ -d "$ctx" ]] && [[ "$(cd "$ctx" && pwd -P)" != "$ctx" ]]; then
+            relocated_ctx="$PWD/.agentcontainer/tmp/build-ctx-$$"
+            mkdir -p "$relocated_ctx"
+            cp -a "$ctx/." "$relocated_ctx/"
+            args[-1]="$relocated_ctx"
+            # If -f pointed into the original context, rewrite it
+            for i in "${!args[@]}"; do
+                if [[ "${args[$i]}" == "$ctx"/* ]]; then
+                    args[$i]="${relocated_ctx}${args[$i]#"$ctx"}"
+                fi
+            done
+        fi
+        container build "${args[@]}"
+        build_exit=$?
+        [[ -n "$relocated_ctx" ]] && rm -rf "$relocated_ctx"
+        exit "$build_exit"
         ;;
     tag)
         # docker tag SOURCE TARGET → container image tag SOURCE TARGET
@@ -81,9 +102,23 @@ case "$1" in
         esac
         ;;
     inspect)
-        # docker inspect IMAGE (without "image" subcommand)
+        # docker inspect [--type image] IMAGE → container image inspect IMAGE
+        # Strip --type (already scoped to images via `container image inspect`)
         shift
-        container image inspect "$@" | inspect_to_docker_format
+        args=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --type) shift 2 ;;
+                --type=*) shift ;;
+                *) args+=("$1"); shift ;;
+            esac
+        done
+        container image inspect "${args[@]}" | inspect_to_docker_format
+        ;;
+    pull)
+        # docker pull IMAGE → container image pull IMAGE
+        shift
+        exec container image pull "$@"
         ;;
     images)
         shift
