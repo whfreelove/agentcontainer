@@ -190,13 +190,16 @@ find_project_container() {
     done
 
     # Fallback: find by devcontainer label (devcontainer CLI sets this on all containers)
-    local label_id
+    local label_id=""
     case "$cmd" in
         docker|podman|nerdctl)
             label_id=$($cmd ps --filter "label=devcontainer.local_folder=$(pwd)" --format '{{.ID}}' 2>/dev/null | head -1 || true)
             ;;
         "lima nerdctl")
             label_id=$(lima nerdctl ps --filter "label=devcontainer.local_folder=$(pwd)" --format '{{.ID}}' 2>/dev/null | head -1 || true)
+            ;;
+        container)
+            label_id=$(container list 2>/dev/null | grep "devcontainer.local_folder=$(pwd)" | head -1 | awk '{print $1}' || true)
             ;;
     esac
 
