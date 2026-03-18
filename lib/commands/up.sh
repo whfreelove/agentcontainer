@@ -266,14 +266,15 @@ parse_devcontainer_mounts() {
             esac
         done
 
-        # Output as -v argument
+        # Output as mount argument
         if [[ "$mount_type" == "volume" && -n "$source" && -n "$target" ]]; then
-            # Ensure volume exists for Apple Container
+            # Apple Container's -v only does bind mounts; named volumes
+            # require --mount type=volume,source=...,target=...
             container volume create "$source" 2>/dev/null || true
-            echo "-v"
-            echo "${source}:${target}"
+            echo "--mount"
+            echo "type=volume,source=${source},target=${target}"
         elif [[ -n "$source" && -n "$target" ]]; then
-            # Bind mount
+            # Bind mount — -v works for both Docker and Apple Container
             echo "-v"
             echo "${source}:${target}${readonly}"
         fi
