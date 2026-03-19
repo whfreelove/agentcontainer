@@ -74,6 +74,13 @@ build_mounts_json() {
     # Uses named volume: ${PROJECT_NAME}-claude-home
     mounts+="${indent}\"type=volume,source=${PROJECT_NAME}-claude-home,target=${CONTAINER_HOME}/.claude\""
 
+    # Nix store volume (persistent across up/down cycles)
+    # Without this, every container restart re-fetches and rebuilds all Nix packages
+    if [[ " ${FEATURES:-} " == *" ghcr.io/devcontainers/features/nix:"* ]]; then
+        mounts+=","$'\n'
+        mounts+="${indent}\"type=volume,source=${PROJECT_NAME}-nix-store,target=/nix\""
+    fi
+
     echo "$mounts"
 }
 
