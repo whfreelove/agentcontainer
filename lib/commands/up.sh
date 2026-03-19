@@ -59,7 +59,29 @@ cmd_up() {
         else
             log_info "Starting existing container..."
             start_existing_container "$container_name" "$container_cmd"
-            return $?
+            local start_rc=$?
+            sleep 1
+
+            local remote_user
+            remote_user=$(jq -r '.remoteUser // empty' ".devcontainer/devcontainer.json" 2>/dev/null)
+
+            # Re-run feature entrypoints (e.g., nix-daemon) — Apple Container
+            # doesn't have an init system, so daemons die on stop
+            if [[ "$container_cmd" == "container" ]]; then
+                local exec_user_args=()
+                [[ -n "$remote_user" ]] && exec_user_args+=(-u "$remote_user")
+                # shellcheck disable=SC2016  # single quotes intentional — $entrypoint expands inside the container
+                container exec ${exec_user_args[@]+"${exec_user_args[@]}"} "$container_name" sh -c '
+                    for entrypoint in /usr/local/share/*-entrypoint.sh; do
+                        if [ -x "$entrypoint" ]; then
+                            "$entrypoint" true || true
+                        fi
+                    done
+                ' || true
+            fi
+
+            restore_claude_auth "$container_name" "$container_cmd" "$remote_user"
+            return "$start_rc"
         fi
     fi
 
@@ -174,6 +196,33 @@ start_apple_container() {
 
         sleep 1
 
+        # Seed empty Nix volume from image (Apple Container doesn't pre-populate volumes)
+        # Only runs when a /nix volume mount is configured (i.e., Nix feature is enabled)
+        if [[ "${mount_args[*]}" == *"/nix"* ]]; then
+            local nix_check_rc=0
+            container exec "$container_name" sh -c '[ -d /nix/store ]' 2>/dev/null || nix_check_rc=$?
+            if [[ "$nix_check_rc" -eq 1 ]]; then
+                # Exit code 1 = test failed (store missing). Seed from image.
+                # Use a temp file (not a pipe) so the seed VM exits before extraction,
+                # avoiding two simultaneous VMs and ensuring a complete tar archive.
+                log_info "Seeding Nix store volume from image..."
+                local nix_tar
+                nix_tar="$(mktemp)"
+                if container run --rm "$image_name" tar -cf - /nix > "$nix_tar" 2>/dev/null \
+                    && [[ -s "$nix_tar" ]] \
+                    && container exec -i "$container_name" tar -xf - -C / < "$nix_tar" 2>/dev/null \
+                    && container exec "$container_name" sh -c '[ -d /nix/store ]' 2>/dev/null; then
+                    log_info "Nix store seeded successfully"
+                else
+                    log_warn "Could not seed Nix store volume — nix-shell may not be available"
+                fi
+                rm -f "$nix_tar"
+            elif [[ "$nix_check_rc" -gt 1 ]]; then
+                # Exit code > 1 = exec failed (container not ready or other error)
+                log_warn "Could not check Nix store status (exit code $nix_check_rc)"
+            fi
+        fi
+
         # Get remoteUser from devcontainer.json
         local remote_user update_uid
         remote_user=$(jq -r '.remoteUser // empty' "$devcontainer_json" 2>/dev/null)
@@ -220,8 +269,10 @@ start_apple_container() {
         post_create_cmd=$(jq -r '.postCreateCommand // empty' "$devcontainer_json" 2>/dev/null)
         if [[ -n "$post_create_cmd" ]]; then
             log_info "Running setup..."
-            container exec ${exec_user_args[@]+"${exec_user_args[@]}"} "$container_name" sh -c "$post_create_cmd" || true
+            container exec ${exec_user_args[@]+"${exec_user_args[@]}"} "$container_name" bash -l -c "$post_create_cmd" || true
         fi
+
+        restore_claude_auth "$container_name" "container" "$remote_user"
 
         log_ok "Container started!"
         echo
@@ -270,7 +321,7 @@ parse_devcontainer_mounts() {
         if [[ "$mount_type" == "volume" && -n "$source" && -n "$target" ]]; then
             # Apple Container's -v only does bind mounts; named volumes
             # require --mount type=volume,source=...,target=...
-            container volume create "$source" 2>/dev/null || true
+            container volume create "$source" >/dev/null 2>&1 || true
             echo "--mount"
             echo "type=volume,source=${source},target=${target}"
         elif [[ -n "$source" && -n "$target" ]]; then

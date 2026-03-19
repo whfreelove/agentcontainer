@@ -47,6 +47,10 @@ cmd_stop() {
 
     log_info "Stopping container..."
 
+    local remote_user
+    remote_user=$(jq -r '.remoteUser // empty' ".devcontainer/devcontainer.json" 2>/dev/null)
+    save_claude_auth "$container_id" "$container_cmd" "$remote_user"
+
     case "$container_cmd" in
         docker|podman|nerdctl)
             $container_cmd stop "$container_id"

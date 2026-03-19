@@ -42,6 +42,7 @@ log_error() { echo -e "${RED}[error]${NC} $*" >&2; }
 source "$LIB_DIR/utils/config.sh"
 source "$LIB_DIR/utils/template.sh"
 source "$LIB_DIR/platform/detect.sh"
+source "$LIB_DIR/utils/auth-persist.sh"
 
 # Show help
 show_help() {
@@ -188,15 +189,16 @@ cmd_run_agent() {
     log_info "Running: $full_cmd"
 
     # Execute the agent command
+    # Use login shell so profile scripts (e.g. /etc/profile.d/nix.sh) are sourced
     case "$container_cmd" in
         docker|podman|nerdctl)
-            exec $container_cmd exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            exec $container_cmd exec "${exec_args[@]}" "$container_id" bash -l -c "$full_cmd"
             ;;
         "lima nerdctl")
-            exec lima nerdctl exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            exec lima nerdctl exec "${exec_args[@]}" "$container_id" bash -l -c "$full_cmd"
             ;;
         container)
-            exec container exec "${exec_args[@]}" "$container_id" sh -c "$full_cmd"
+            exec container exec "${exec_args[@]}" "$container_id" bash -l -c "$full_cmd"
             ;;
         *)
             log_error "Don't know how to exec with: $container_cmd"

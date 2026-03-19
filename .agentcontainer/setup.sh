@@ -13,6 +13,12 @@ if [[ "$(id -u)" != "0" && -d "$HOME/.claude" ]]; then
     sudo chown -R "$(id -u):$(id -g)" "$HOME/.claude" 2>/dev/null || true
 fi
 
+# Restore auth files from volume (saved by `agentcontainer down`/`stop`)
+for f in "$HOME/.claude"/.claude.json "$HOME/.claude"/.claude.json.backup.*; do
+    [[ -f "$f" ]] || continue
+    cp "$f" "$HOME/$(basename "$f")"
+done
+
 # Run project setup script if configured
 _setup=""
 if [[ -n "$_setup" ]]; then

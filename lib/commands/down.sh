@@ -47,6 +47,10 @@ cmd_down() {
 
     log_info "Stopping and removing container..."
 
+    local remote_user
+    remote_user=$(jq -r '.remoteUser // empty' ".devcontainer/devcontainer.json" 2>/dev/null)
+    save_claude_auth "$container_id" "$container_cmd" "$remote_user"
+
     # Force remove (stops if running)
     case "$container_cmd" in
         docker|podman|nerdctl)
