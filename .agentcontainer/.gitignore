@@ -1,2 +1,5 @@
+# Machine-specific config (resources, platform)
+local.conf
+
 # Claude local files
 .claude/*.local.md
