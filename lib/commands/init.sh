@@ -179,6 +179,11 @@ Examples:
     agentcontainer init --resources 8g:4:1000
     agentcontainer init --setup ./scripts/dev-setup.sh
     agentcontainer init --features "ghcr.io/devcontainers/features/python:1"
+
+Reconfiguration:
+    After editing agentcontainer.conf, run 'init --force' to regenerate
+    devcontainer.json, then 'down', 'build', 'up' to apply changes.
+    --force re-reads existing config values and preserves local.conf.
 EOF
 }
 

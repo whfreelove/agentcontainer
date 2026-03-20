@@ -81,6 +81,11 @@ Configuration (.agentcontainer/agentcontainer.conf):
     EXEC_AGENT="claude"                              # Args append at end
     EXEC_AGENT="nix-shell --run 'claude {}'"         # {} = where args go
 
+Lifecycle:
+    First time:    init → build → up → shell
+    Reconfigure:   edit conf → init --force → down → build → up
+    Daily use:     up → (run agent) → stop/down
+
 For more information, see: https://github.com/whfreelove/agentcontainer
 EOF
 }
@@ -289,6 +294,16 @@ main() {
                 print_config
             else
                 log_warn "No agentcontainer.conf found. Run 'agentcontainer init' first."
+            fi
+            if [[ -f ".devcontainer/devcontainer.json" ]]; then
+                if [[ "$AGENTCONTAINER_CONFIG" -nt ".devcontainer/devcontainer.json" ]]; then
+                    log_warn "agentcontainer.conf is newer than devcontainer.json"
+                    echo "  Run 'agentcontainer init --force' then rebuild to apply changes"
+                fi
+                if [[ -f "$AGENTCONTAINER_LOCAL_CONFIG" && "$AGENTCONTAINER_LOCAL_CONFIG" -nt ".devcontainer/devcontainer.json" ]]; then
+                    log_warn "local.conf is newer than devcontainer.json"
+                    echo "  Run 'agentcontainer init --force' then rebuild to apply changes"
+                fi
             fi
             ;;
         *)

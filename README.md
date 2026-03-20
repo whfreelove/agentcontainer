@@ -48,6 +48,46 @@ agentcontainer up
 agentcontainer shell
 ```
 
+## Lifecycle
+
+### First-time setup
+
+```bash
+agentcontainer init               # generate config files
+agentcontainer build              # build container image
+agentcontainer up                 # start container
+agentcontainer shell              # get a shell (or just run 'agentcontainer' for agent)
+```
+
+### Reconfiguration
+
+`devcontainer.json` is generated from `agentcontainer.conf` — edit the conf, not the JSON directly.
+
+```bash
+# 1. Edit the config
+vim .agentcontainer/agentcontainer.conf
+
+# 2. Regenerate devcontainer.json
+agentcontainer init --force
+
+# 3. Rebuild and restart
+agentcontainer down
+agentcontainer build
+agentcontainer up
+```
+
+`init --force` re-reads existing config values before regenerating files. It preserves `local.conf` and any values already set in `agentcontainer.conf`.
+
+### Daily use
+
+```bash
+agentcontainer up                 # start (idempotent if running)
+agentcontainer                    # run the agent (EXEC_AGENT)
+agentcontainer shell              # debug shell
+agentcontainer stop               # pause (preserves container)
+agentcontainer down               # remove container (image preserved)
+```
+
 ## Commands
 
 ### `agentcontainer` (agent run mode)
@@ -269,7 +309,7 @@ The SessionStart hook:
     └── plans/              # Claude plans (writable mount)
 
 .devcontainer/
-└── devcontainer.json       # Generated devcontainer config
+└── devcontainer.json       # Generated from agentcontainer.conf (do not edit directly)
 ```
 
 ## Development
