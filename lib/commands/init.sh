@@ -200,6 +200,7 @@ detect_project_settings() {
     : "${MACOS_RUNTIME:=auto}"
     : "${CONTAINER_RUNTIME:=}"
     : "${CUSTOM_SETUP_CMD:=}"
+    : "${EXTRA_MOUNTS:=}"
 
     : "${AGENTS:=}"
     : "${FEATURES:=}"
@@ -209,7 +210,7 @@ detect_project_settings() {
 
     # Export all variables
     export PROJECT_NAME WORKSPACE_FOLDER BASE_IMAGE AGENTS FEATURES SETUP_SCRIPT DEFAULT_SHELL EXEC_AGENT
-    export MEMORY_LIMIT CPU_LIMIT PID_LIMIT MACOS_RUNTIME CONTAINER_RUNTIME
+    export MEMORY_LIMIT CPU_LIMIT PID_LIMIT MACOS_RUNTIME CONTAINER_RUNTIME EXTRA_MOUNTS
 }
 
 # Generate devcontainer.json with computed features and mounts

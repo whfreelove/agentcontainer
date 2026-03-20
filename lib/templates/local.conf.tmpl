@@ -12,3 +12,18 @@ PID_LIMIT="${PID_LIMIT}"
 MACOS_RUNTIME="${MACOS_RUNTIME}"
 # Override auto-detection (docker, podman, nerdctl, lima)
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME}"
+
+# Extra container mounts (newline-separated)
+# Bind-mount host directories into the container. Each line is a full
+# devcontainer mount string. Use ${localEnv:VAR} for host env vars.
+#
+# After changing, regenerate with: agentcontainer init --force
+# Then rebuild:                    agentcontainer down && agentcontainer build && agentcontainer up
+#
+# Example — mount a local data directory read-only:
+#   EXTRA_MOUNTS="type=bind,source=/home/me/datasets,target=/data/datasets,readonly"
+#
+# Example — multiple mounts:
+#   EXTRA_MOUNTS="type=bind,source=/host/path1,target=/data/path1,readonly
+#   type=bind,source=/host/path2,target=/data/path2"
+EXTRA_MOUNTS=""

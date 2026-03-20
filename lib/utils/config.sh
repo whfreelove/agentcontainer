@@ -35,10 +35,12 @@ load_config() {
     : "${EXEC_AGENT:=}"
     : "${MACOS_RUNTIME:=auto}"
     : "${CONTAINER_RUNTIME:=}"
+    : "${EXTRA_MOUNTS:=}"
 
     # Export for subprocesses
     export PROJECT_NAME WORKSPACE_FOLDER BASE_IMAGE MEMORY_LIMIT CPU_LIMIT PID_LIMIT
     export AGENTS FEATURES SETUP_SCRIPT DEFAULT_SHELL EXEC_AGENT MACOS_RUNTIME CONTAINER_RUNTIME
+    export EXTRA_MOUNTS
 }
 
 # Validate required config
@@ -78,6 +80,7 @@ print_config() {
     echo "PID_LIMIT=$PID_LIMIT"
     echo "MACOS_RUNTIME=$MACOS_RUNTIME"
     echo "CONTAINER_RUNTIME=${CONTAINER_RUNTIME:-<auto>}"
+    echo "EXTRA_MOUNTS=${EXTRA_MOUNTS:-<none>}"
     echo "========================================"
 }
 

@@ -21,6 +21,7 @@ expand_template() {
     vars+=' ${AGENTS} ${FEATURES} ${SETUP_SCRIPT} ${DEFAULT_SHELL} ${EXEC_AGENT}'
     vars+=' ${MEMORY_LIMIT} ${CPU_LIMIT} ${PID_LIMIT}'
     vars+=' ${MACOS_RUNTIME} ${CONTAINER_RUNTIME}'
+    vars+=' ${EXTRA_MOUNTS}'
     vars+=' ${FEATURES_JSON} ${MOUNTS_JSON} ${SHELL_PROFILES_JSON}'
 
     envsubst "$vars" < "$template_file" > "$output_file"
@@ -36,6 +37,8 @@ build_features_json() {
         case "$agent" in
             claude-code)
                 output+="${indent}\"ghcr.io/anthropics/devcontainer-features/claude-code:1\": {},"$'\n'
+                # Claude Code requires Node.js >= 20 (uses ES2023 Array.prototype.with)
+                output+="${indent}\"ghcr.io/devcontainers/features/node:1\": { \"version\": \"20\" },"$'\n'
                 ;;
             opencode)
                 output+="${indent}\"ghcr.io/devcontainer-community/devcontainer-features/opencode.ai:1\": {},"$'\n'
@@ -79,6 +82,18 @@ build_mounts_json() {
     if [[ " ${FEATURES:-} " == *" ghcr.io/devcontainers/features/nix:"* ]]; then
         mounts+=","$'\n'
         mounts+="${indent}\"type=volume,source=${PROJECT_NAME}-nix-store,target=/nix\""
+    fi
+
+    # Extra mounts from EXTRA_MOUNTS (newline-separated mount strings)
+    # Each entry is a full devcontainer mount string, e.g.:
+    #   "type=bind,source=/host/path,target=/container/path,readonly"
+    if [[ -n "${EXTRA_MOUNTS:-}" ]]; then
+        while IFS= read -r mount_entry; do
+            mount_entry="$(echo "$mount_entry" | xargs)"  # trim whitespace
+            [[ -z "$mount_entry" || "$mount_entry" == \#* ]] && continue
+            mounts+=","$'\n'
+            mounts+="${indent}\"${mount_entry}\""
+        done <<< "$EXTRA_MOUNTS"
     fi
 
     echo "$mounts"
