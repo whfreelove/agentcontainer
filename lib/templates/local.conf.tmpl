@@ -27,3 +27,8 @@ CONTAINER_RUNTIME="${CONTAINER_RUNTIME}"
 #   EXTRA_MOUNTS="type=bind,source=/host/path1,target=/data/path1,readonly
 #   type=bind,source=/host/path2,target=/data/path2"
 EXTRA_MOUNTS=""
+
+# Git identity (applied inside container during setup)
+# Required for git commit to work inside the container.
+GIT_USER_NAME=""
+GIT_USER_EMAIL=""

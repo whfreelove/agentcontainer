@@ -19,6 +19,18 @@ for f in "$HOME/.claude"/.claude.json "$HOME/.claude"/.claude.json.backup.*; do
     cp "$f" "$HOME/$(basename "$f")"
 done
 
+# Relative worktree paths resolve inside the container (host and
+# container have different absolute paths to the repo)
+git config --global worktree.useRelativePaths true
+
+# Apply git identity from local.conf if present
+_local_conf="${WORKSPACE_FOLDER}/.agentcontainer/local.conf"
+if [[ -f "$_local_conf" ]]; then
+    source "$_local_conf"
+    [[ -n "${GIT_USER_NAME:-}" ]]  && git config --global user.name  "$GIT_USER_NAME"
+    [[ -n "${GIT_USER_EMAIL:-}" ]] && git config --global user.email "$GIT_USER_EMAIL"
+fi
+
 # Run project setup script if configured
 _setup="${SETUP_SCRIPT}"
 if [[ -n "$_setup" ]]; then

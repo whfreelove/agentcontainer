@@ -87,6 +87,7 @@ cmd_init() {
 
     # Create directories
     mkdir -p .agentcontainer/.claude/plans
+    mkdir -p .claude/worktrees
     mkdir -p .devcontainer
 
     # Generate project config (tracked)
@@ -206,6 +207,8 @@ detect_project_settings() {
     : "${CONTAINER_RUNTIME:=}"
     : "${CUSTOM_SETUP_CMD:=}"
     : "${EXTRA_MOUNTS:=}"
+    : "${GIT_USER_NAME:=}"
+    : "${GIT_USER_EMAIL:=}"
 
     : "${AGENTS:=}"
     : "${FEATURES:=}"
@@ -216,6 +219,7 @@ detect_project_settings() {
     # Export all variables
     export PROJECT_NAME WORKSPACE_FOLDER BASE_IMAGE AGENTS FEATURES SETUP_SCRIPT DEFAULT_SHELL EXEC_AGENT
     export MEMORY_LIMIT CPU_LIMIT PID_LIMIT MACOS_RUNTIME CONTAINER_RUNTIME EXTRA_MOUNTS
+    export GIT_USER_NAME GIT_USER_EMAIL
 }
 
 # Generate devcontainer.json with computed features and mounts

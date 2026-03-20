@@ -73,6 +73,10 @@ build_mounts_json() {
     # Project Claude config at workspace root (hooks, plans, CLAUDE.md)
     mounts+="${indent}\"type=bind,source=\${localWorkspaceFolder}/.agentcontainer/.claude,target=${WORKSPACE_FOLDER}/.claude\","$'\n'
 
+    # Git worktree overlay — keeps .claude/worktrees/ at the same depth
+    # on host and in container so relative gitdir paths work in both
+    mounts+="${indent}\"type=bind,source=\${localWorkspaceFolder}/.claude/worktrees,target=${WORKSPACE_FOLDER}/.claude/worktrees\","$'\n'
+
     # Claude auth volume at $HOME/.claude (persistent across up/down cycles)
     # Uses named volume: ${PROJECT_NAME}-claude-home
     mounts+="${indent}\"type=volume,source=${PROJECT_NAME}-claude-home,target=${CONTAINER_HOME}/.claude\""
