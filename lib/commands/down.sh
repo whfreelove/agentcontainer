@@ -90,23 +90,24 @@ find_project_container_all() {
     local project="$1"
     local cmd="$2"
 
+    # Anchored regexes to avoid substring matches (e.g. cbp-ng vs cbp-ng-analysis)
     local patterns=(
-        "agentcontainer-${project}"
-        "vsc-${project}-"
-        "${project}_devcontainer"
+        "^agentcontainer-${project}$"
+        "^vsc-${project}-[^-]+$"
+        "^${project}_devcontainer(-[0-9]+)?$"
     )
 
     for pattern in "${patterns[@]}"; do
         local container_id
         case "$cmd" in
             docker|podman|nerdctl)
-                container_id=$($cmd ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
+                container_id=$($cmd ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | awk -v p="$pattern" '$2 ~ p {print $1; exit}' || true)
                 ;;
             "lima nerdctl")
-                container_id=$(lima nerdctl ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
+                container_id=$(lima nerdctl ps -a --format '{{.ID}} {{.Names}}' 2>/dev/null | awk -v p="$pattern" '$2 ~ p {print $1; exit}' || true)
                 ;;
             container)
-                container_id=$(container list --all 2>/dev/null | grep "$pattern" | head -1 | awk '{print $1}' || true)
+                container_id=$(container list --all 2>/dev/null | awk -v p="$pattern" '$1 ~ p {print $1; exit}' || true)
                 ;;
         esac
 

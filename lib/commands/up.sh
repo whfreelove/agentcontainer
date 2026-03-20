@@ -390,7 +390,7 @@ container_exists() {
             lima nerdctl ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"
             ;;
         container)
-            container list --all 2>/dev/null | grep -q "$name"
+            container list --all 2>/dev/null | awk -v n="$name" '$1 == n {found=1; exit} END {exit !found}'
             ;;
         *)
             return 1
@@ -411,7 +411,7 @@ container_running() {
             lima nerdctl ps --format '{{.Names}}' 2>/dev/null | grep -q "^${name}$"
             ;;
         container)
-            container list 2>/dev/null | grep -q "$name"
+            container list 2>/dev/null | awk -v n="$name" '$1 == n {found=1; exit} END {exit !found}'
             ;;
         *)
             return 1
