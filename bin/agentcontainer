@@ -130,7 +130,7 @@ cmd_run_agent() {
         echo
         echo "Set EXEC_AGENT to the command that runs your agent, e.g.:"
         echo "  EXEC_AGENT=\"claude\""
-        echo "  EXEC_AGENT=\"nix-shell --run claude\""
+        echo "  EXEC_AGENT=\"nix-shell --run 'claude {}'\""
         return 1
     fi
 
@@ -179,11 +179,17 @@ cmd_run_agent() {
         args_str="${args_str# }"  # trim leading space
     fi
 
-    # Insert args at {} placeholder, or append at end
+    # Insert args at {} placeholder, or into --run argument, or append
     if [[ "$full_cmd" == *'{}'* ]]; then
         full_cmd="${full_cmd//\{\}/$args_str}"
     elif [[ -n "$args_str" ]]; then
-        full_cmd+=" $args_str"
+        # For "--run <cmd>" patterns (e.g. nix-shell --run claude), args must
+        # go inside the --run argument, not appended to the outer command.
+        if [[ "$full_cmd" =~ (.*--run[[:space:]]+)([^[:space:]\'\"]+)(.*) ]]; then
+            full_cmd="${BASH_REMATCH[1]}'${BASH_REMATCH[2]} ${args_str}'${BASH_REMATCH[3]}"
+        else
+            full_cmd+=" $args_str"
+        fi
     fi
 
     log_info "Running: $full_cmd"
