@@ -204,6 +204,11 @@ transfer_to_apple_container() {
     # Pipe directly from build runtime to Apple Container
     case "$build_runtime" in
         lima)
+            if ! limactl list --format '{{.Name}} {{.Status}}' 2>/dev/null | grep -q '^default.*Running'; then
+                _lima_diagnose
+                log_error "Cannot transfer image: Lima is not available."
+                return 1
+            fi
             if limactl shell default nerdctl save "$image_name" | container image load; then
                 log_ok "Image transferred to Apple Container"
             else
