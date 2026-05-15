@@ -15,17 +15,56 @@ detect_platform() {
     esac
 }
 
+# Diagnose Lima status. Prints actionable error messages to stderr.
+# Returns 0 if Lima is usable, 1 with diagnostics if not.
+_lima_diagnose() {
+    if ! command -v limactl &>/dev/null; then
+        log_error "Lima CLI ('limactl') not found in PATH."
+        log_error "Install Lima: https://lima-vm.io/docs/installation/"
+        return 1
+    fi
+
+    if ! limactl list --format '{{.Name}}' 2>/dev/null | grep -q '^default$'; then
+        log_error "Lima is installed but no 'default' instance exists."
+        log_error "Create one with: limactl start"
+        return 1
+    fi
+
+    local status
+    status="$(limactl list --format '{{.Name}} {{.Status}}' 2>/dev/null | awk '$1=="default"{print $2}')"
+    if [[ "$status" != "Running" ]]; then
+        log_error "Lima 'default' instance exists but is not running (status: ${status:-unknown})."
+        log_error "Start it with: limactl start default"
+        return 1
+    fi
+
+    local nerdctl_err
+    if ! nerdctl_err="$(lima nerdctl version 2>&1)"; then
+        log_error "Lima instance is running but 'lima nerdctl version' failed:"
+        log_error "$nerdctl_err"
+        return 1
+    fi
+
+    return 0
+}
+
 detect_runtime() {
     local platform="${1:-$(detect_platform)}"
 
     # Allow override via config
     if [[ -n "${CONTAINER_RUNTIME:-}" ]]; then
+        if [[ "$CONTAINER_RUNTIME" == "lima" ]]; then
+            _lima_diagnose || true
+        fi
         echo "$CONTAINER_RUNTIME"
         return
     fi
 
     # macOS-specific override
     if [[ "$platform" == "darwin" && -n "${MACOS_RUNTIME:-}" && "${MACOS_RUNTIME}" != "auto" ]]; then
+        if [[ "$MACOS_RUNTIME" == "lima" ]]; then
+            _lima_diagnose || true
+        fi
         echo "$MACOS_RUNTIME"
         return
     fi
@@ -116,7 +155,10 @@ check_runtime() {
             $cmd --version &>/dev/null
             ;;
         lima)
-            lima nerdctl version &>/dev/null
+            if ! lima nerdctl version &>/dev/null; then
+                _lima_diagnose
+                return 1
+            fi
             ;;
         containerd)
             $cmd version &>/dev/null
