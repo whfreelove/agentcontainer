@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git reset *)",
+      "Bash(git rebase *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git commit --amend*)",
+      "Bash(git filter-branch*)",
+      "Bash(git stash*)",
+      "Bash(git branch -f *)",
+      "Bash(git checkout -B *)",
+      "Bash(git clean *)",
+      "Bash(git checkout -- *)",
+      "Bash(kill *)",
+      "Bash(pkill *)",
+      "Bash(killall *)",
+      "Bash(sed -i *)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf .*)",
+      "Bash(chmod -R 777 *)",
+      "Bash(chmod 777 *)",
+      "Bash(chown -R *)",
+      "Bash(dd *)",
+      "Bash(mkfs *)",
+      "Bash(shutdown *)",
+      "Bash(reboot *)",
+      "Bash(curl * | bash*)",
+      "Bash(curl * | sh*)",
+      "Bash(wget * | bash*)",
+      "Bash(wget * | sh*)",
+      "Bash(ls /)",
+      "Bash(ls ..)"
+    ],
+    "defaultMode": "plan"
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNestedSandbox": true,
+    "network": {
+      "deniedDomains": [
+        "app.posthog.com"
+      ]
+    }
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "disableAnalytics": true
+}
