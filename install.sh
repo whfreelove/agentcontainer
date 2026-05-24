@@ -201,6 +201,15 @@ main() {
         "$src_dir/bin/agentcontainer" > "$INSTALL_DIR/agentcontainer"
     chmod +x "$INSTALL_DIR/agentcontainer"
 
+    # Install skills for Claude Code
+    local skills_src="$src_dir/skills"
+    if [[ -d "$skills_src" ]]; then
+        log_info "Installing Claude Code skills..."
+        mkdir -p "$HOME/.claude/skills"
+        cp -r "$skills_src"/*/  "$HOME/.claude/skills/"
+        log_ok "Claude Code skills installed"
+    fi
+
     log_ok "Installation complete!"
     echo
 
