@@ -43,6 +43,19 @@ load_config() {
     export PROJECT_NAME WORKSPACE_FOLDER BASE_IMAGE MEMORY_LIMIT CPU_LIMIT PID_LIMIT
     export AGENTS FEATURES SETUP_SCRIPT DEFAULT_SHELL EXEC_AGENT MACOS_RUNTIME CONTAINER_RUNTIME
     export EXTRA_MOUNTS GIT_USER_NAME GIT_USER_EMAIL
+
+    warn_if_worktree
+}
+
+warn_if_worktree() {
+    if [[ -f ".git" ]] && grep -q "^gitdir:" ".git" 2>/dev/null; then
+        local main_repo
+        main_repo="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || return 0
+        main_repo="${main_repo%/.git}"
+        log_warn "You are in a git worktree. The container for '$PROJECT_NAME' is managed from:"
+        log_warn "  $main_repo"
+        log_warn "Run agentcontainer commands from the main repo directory."
+    fi
 }
 
 # Validate required config
